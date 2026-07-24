@@ -56,6 +56,10 @@ def test_olmo_lora_qlora_at_init(strategy):
     ]
     assert len(frozen) > 0
 
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
+
 
 @pytest.mark.hf
 @pytest.mark.parametrize("strategy", ["lora", "qlora"])
@@ -63,11 +67,16 @@ def test_olmo_lora_qlora_fit_predict(smiles_regression_dataset, strategy):
     """Test that a LoRA/QLoRA-wrapped regression model can fit and predict."""
     from deepchem.models.torch_models.olmo import Olmo
 
+    tokenizer_path = "allenai/OLMo-1B-hf"
     model = Olmo(task_type="regression",
-                 tokenizer_path="allenai/OLMo-1B-hf",
+                 tokenizer_path=tokenizer_path,
                  n_tasks=1,
                  finetune_strategy=strategy,
                  torch_dtype="float16")
+
+    # Loads pretrained weights and, for qlora, actually applies the 4-bit
+    # BitsAndBytesConfig, which __init__ alone does not do.
+    model.load_from_pretrained(tokenizer_path, from_hf_checkpoint=True)
 
     loss = model.fit(smiles_regression_dataset, nb_epoch=1)
     assert loss is not None
