@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 import pytest
+import gc
+import torch
 
 import deepchem as dc
 
@@ -72,3 +74,8 @@ def test_olmo_lora_qlora_fit_predict(smiles_regression_dataset, strategy):
 
     prediction = model.predict(smiles_regression_dataset)
     assert prediction.shape == smiles_regression_dataset.y.shape
+    del prediction
+    del loss
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
