@@ -45,6 +45,7 @@ class OlmoForSequenceClassification(OlmoPreTrainedModel):
                 labels=None,
                 **kwargs):
         """Forward pass for OLMo sequence classification/regression."""
+        kwargs['use_cache'] = False
         outputs = self.model(input_ids, attention_mask=attention_mask, **kwargs)
         hidden_states = outputs[0]
         logits = self.score(hidden_states)
@@ -66,7 +67,7 @@ class OlmoForSequenceClassification(OlmoPreTrainedModel):
                                sequence_lengths]
 
         loss = None
-        if labels is not None:
+        if labels is not None and self.training:
             labels = labels.to(logits.device)
             if self.config.problem_type == "regression":
                 loss = nn.MSELoss()(pooled_logits, labels)
@@ -211,6 +212,13 @@ class Olmo(HuggingFaceModel):
             tokenizer=tokenizer,
             task=task_type,
             **kwargs)
+        self._loss_fn = self._extract_hf_loss
+
+    @staticmethod
+    def _extract_hf_loss(outputs, labels, weights):
+        if isinstance(outputs, (list, tuple)):
+            outputs = outputs[0]
+        return outputs["loss"] if isinstance(outputs, dict) else outputs.loss
 
     def load_from_pretrained(  # type: ignore[override]
             self,
