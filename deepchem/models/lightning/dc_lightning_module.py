@@ -220,6 +220,9 @@ class DCLightningModule(L.LightningModule):
             output_values = self.pt_model(inputs)
         if isinstance(output_values, torch.Tensor):
             output_values = [output_values]
+        elif hasattr(output_values, 'to_tuple'):
+            # Handles HuggingFace ModelOutput objects which subclass OrderedDict and would otherwise iterate over their string keys.
+            output_values = list(output_values.to_tuple())
         output_values_np: List[np.ndarray] = [
             t.detach().cpu().numpy() for t in output_values
         ]
