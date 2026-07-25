@@ -67,7 +67,7 @@ class OlmoForSequenceClassification(OlmoPreTrainedModel):
                                sequence_lengths]
 
         loss = None
-        if labels is not None and self.training:
+        if labels is not None and torch.is_grad_enabled():
             labels = labels.to(logits.device)
             if self.config.problem_type == "regression":
                 loss = nn.MSELoss()(pooled_logits, labels)
