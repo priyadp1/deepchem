@@ -15,16 +15,29 @@ from deepchem.models.torch_models.hf_models import HuggingFaceModel
 class OlmoForSequenceClassification(OlmoPreTrainedModel):
     """OLMo with a linear scoring head over the last token's hidden state.
 
+    Since OLMo is decoder-only, the head pools the hidden state at the last
+    non-padding token of each sequence (via config.pad_token_id) instead
+    of a [CLS] token. If labels are passed to forward, a loss is
+    computed per config.problem_type.
+
     Parameters
     ----------
     config : OlmoConfig
-        Must have num_labels and problem_type set.
+        Must have num_labels and problem_type set
+        (regression or multi_label_classification).
 
     Example
     --------
+    >>> import torch
+    >>> from transformers import AutoTokenizer
+    >>> tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-7B-hf")
     >>> model = OlmoForSequenceClassification.from_pretrained(
     ...     "allenai/OLMo-7B-hf", num_labels=1,
-    ...     problem_type="multi_label_classification")
+    ...     problem_type="regression")
+    >>> inputs = tokenizer(["CC(=O)Oc1ccccc1C(=O)O"], return_tensors="pt")
+    >>> outputs = model(**inputs, labels=torch.tensor([[1.6]]))
+    >>> outputs.logits.shape
+    torch.Size([1, 1])
     """
 
     base_model_prefix = "model"
@@ -105,15 +118,15 @@ class Olmo(HuggingFaceModel):
 
     Parameters
     ----------
-    task_type : str, default 'classification'
-        One of 'classification', 'regression', 'causal_lm', 'mtc', or 'mtr'.
-    tokenizer_path : str, default 'allenai/OLMo-7B-hf'
+    task_type : str, default classification
+        One of classification, regression, causal_lm, mtc, or mtr.
+    tokenizer_path : str, default allenai/OLMo-7B-hf
         HuggingFace model ID or local path for the tokenizer and config.
     n_tasks : int, default 1
         Number of output labels. Ignored for causal_lm.
     torch_dtype : str or torch.dtype or None, default None
-        Dtype for model weights. String aliases: 'float16'/'fp16',
-        'bfloat16'/'bf16', 'float32'/'fp32', 'float64'/'fp64'.
+        Dtype for model weights. String aliases: float16/fp16,
+        bfloat16/bf16, float32/fp32, float64/fp64.
     quantization_config : Optional[transformers.BitsAndBytesConfig], default None
         Used only by load_from_pretrained(..., from_hf_checkpoint=True).
     gradient_checkpointing : bool, default False
