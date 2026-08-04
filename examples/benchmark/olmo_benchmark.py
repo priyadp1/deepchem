@@ -13,6 +13,7 @@ except ImportError:
 
 import deepchem as dc
 from deepchem.models.torch_models.olmo import Olmo
+from deepchem.models.lightning import LightningTorchModel
 import numpy as np
 import pandas as pd
 import torch
@@ -135,7 +136,6 @@ def continued_pretraining():
 
 
 FINETUNE_DIR = "./olmo_checkpoints_regression"
-DATASET_NAME = "delaney"
 
 
 def build_regression_dataset():
@@ -178,62 +178,40 @@ def finetune_regression(nb_epoch=20, batch_size=128):
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
 
-    best_test_rms = float("inf")
-    best_epoch = None
-    best_checkpoint_path = None
+    num_gpus = torch.cuda.device_count()
+    trainer = LightningTorchModel(
+        model=finetune_model,
+        batch_size=batch_size,
+        model_dir=FINETUNE_DIR,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=-1 if torch.cuda.is_available() else 1,
+        strategy="ddp" if num_gpus > 1 else "auto",
+        enable_progress_bar=True,
+        log_every_n_steps=1)
 
-    for epoch in range(1, nb_epoch + 1):
-        t0 = time.time()
-        loss = finetune_model.fit(train_dataset,
-                                  nb_epoch=1,
-                                  checkpoint_interval=0)
-        elapsed = time.time() - t0
-        train_rms = finetune_model.evaluate(train_dataset,
-                                            metrics=[metric])["rms_score"]
-        test_rms = finetune_model.evaluate(test_dataset,
-                                           metrics=[metric])["rms_score"]
-        peak_mem = (torch.cuda.max_memory_allocated() /
-                    1e9 if torch.cuda.is_available() else 0.0)
+    t0 = time.time()
+    trainer.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
+    elapsed = time.time() - t0
 
-        improved = test_rms < best_test_rms
-        if improved:
-            best_test_rms = test_rms
-            best_epoch = epoch
+    train_rms = finetune_model.evaluate(train_dataset,
+                                        metrics=[metric])["rms_score"]
+    test_rms = finetune_model.evaluate(test_dataset,
+                                       metrics=[metric])["rms_score"]
+    peak_mem = (torch.cuda.max_memory_allocated() /
+                1e9 if torch.cuda.is_available() else 0.0)
 
-            if best_checkpoint_path is not None and os.path.exists(
-                    best_checkpoint_path):
-                os.remove(best_checkpoint_path)
-            if not os.path.exists(FINETUNE_DIR):
-                os.makedirs(FINETUNE_DIR)
-            best_checkpoint_path = os.path.join(
-                FINETUNE_DIR,
-                f"epoch{epoch}_rms{test_rms:.3f}_{DATASET_NAME}.pt")
-            finetune_model._ensure_built()
-            torch.save(
-                {
-                    'model_state_dict':
-                        finetune_model.model.state_dict(),
-                    'optimizer_state_dict':
-                        finetune_model._pytorch_optimizer.state_dict(),
-                    'global_step':
-                        finetune_model._global_step
-                }, best_checkpoint_path)
+    print(f"After {nb_epoch} epochs on {num_gpus} GPU(s) ({elapsed:.1f}s): "
+          f"train_rms={train_rms:.3f} test_rms={test_rms:.3f} "
+          f"peak_mem={peak_mem:.2f}GB")
+    print(f"Checkpoints saved under "
+          f"{os.path.join(FINETUNE_DIR, 'checkpoints')}")
 
-        print(
-            f"Epoch {epoch:2d}: loss={loss:.4f} train_rms={train_rms:.3f} "
-            f"test_rms={test_rms:.3f} time={elapsed:.1f}s peak_mem={peak_mem:.2f}GB"
-            f"{' (new best, checkpoint saved)' if improved else ''}")
-
-    print(f"Best test RMS: {best_test_rms:.3f} at epoch {best_epoch}, "
-          f"checkpoint saved to {best_checkpoint_path}")
-
-    del finetune_model
+    del finetune_model, trainer
     gc.collect()
     torch.cuda.empty_cache()
 
 
 CLASSIFICATION_FINETUNE_DIR = "./olmo_checkpoints_classification"
-CLASSIFICATION_DATASET_NAME = "bbbp"
 
 
 def load_bbbp():
@@ -278,57 +256,35 @@ def finetune_classification(nb_epoch=20, batch_size=128):
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
 
-    best_test_auc = float("-inf")
-    best_epoch = None
-    best_checkpoint_path = None
+    num_gpus = torch.cuda.device_count()
+    trainer = LightningTorchModel(
+        model=finetune_model,
+        batch_size=batch_size,
+        model_dir=CLASSIFICATION_FINETUNE_DIR,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=-1 if torch.cuda.is_available() else 1,
+        strategy="ddp" if num_gpus > 1 else "auto",
+        enable_progress_bar=True,
+        log_every_n_steps=1)
 
-    for epoch in range(1, nb_epoch + 1):
-        t0 = time.time()
-        loss = finetune_model.fit(train_dataset,
-                                  nb_epoch=1,
-                                  checkpoint_interval=0)
-        elapsed = time.time() - t0
-        train_auc = finetune_model.evaluate(train_dataset,
-                                            metrics=[metric])["roc_auc_score"]
-        test_auc = finetune_model.evaluate(test_dataset,
-                                           metrics=[metric])["roc_auc_score"]
-        peak_mem = (torch.cuda.max_memory_allocated() /
-                    1e9 if torch.cuda.is_available() else 0.0)
+    t0 = time.time()
+    trainer.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
+    elapsed = time.time() - t0
 
-        improved = test_auc > best_test_auc
-        if improved:
-            best_test_auc = test_auc
-            best_epoch = epoch
+    train_auc = finetune_model.evaluate(train_dataset,
+                                        metrics=[metric])["roc_auc_score"]
+    test_auc = finetune_model.evaluate(test_dataset,
+                                       metrics=[metric])["roc_auc_score"]
+    peak_mem = (torch.cuda.max_memory_allocated() /
+                1e9 if torch.cuda.is_available() else 0.0)
 
-            if best_checkpoint_path is not None and os.path.exists(
-                    best_checkpoint_path):
-                os.remove(best_checkpoint_path)
-            if not os.path.exists(CLASSIFICATION_FINETUNE_DIR):
-                os.makedirs(CLASSIFICATION_FINETUNE_DIR)
-            best_checkpoint_path = os.path.join(
-                CLASSIFICATION_FINETUNE_DIR,
-                f"epoch{epoch}_auc{test_auc:.3f}_{CLASSIFICATION_DATASET_NAME}.pt"
-            )
-            finetune_model._ensure_built()
-            torch.save(
-                {
-                    'model_state_dict':
-                        finetune_model.model.state_dict(),
-                    'optimizer_state_dict':
-                        finetune_model._pytorch_optimizer.state_dict(),
-                    'global_step':
-                        finetune_model._global_step
-                }, best_checkpoint_path)
+    print(f"After {nb_epoch} epochs on {num_gpus} GPU(s) ({elapsed:.1f}s): "
+          f"train_auc={train_auc:.3f} test_auc={test_auc:.3f} "
+          f"peak_mem={peak_mem:.2f}GB")
+    print(f"Checkpoints saved under "
+          f"{os.path.join(CLASSIFICATION_FINETUNE_DIR, 'checkpoints')}")
 
-        print(
-            f"Epoch {epoch:2d}: loss={loss:.4f} train_auc={train_auc:.3f} "
-            f"test_auc={test_auc:.3f} time={elapsed:.1f}s peak_mem={peak_mem:.2f}GB"
-            f"{' (new best, checkpoint saved)' if improved else ''}")
-
-    print(f"Best test ROC-AUC: {best_test_auc:.3f} at epoch {best_epoch}, "
-          f"checkpoint saved to {best_checkpoint_path}")
-
-    del finetune_model
+    del finetune_model, trainer
     gc.collect()
     torch.cuda.empty_cache()
 
