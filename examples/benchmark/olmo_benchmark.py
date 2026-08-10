@@ -117,7 +117,7 @@ def continued_pretraining():
 
     print("Starting continued pretraining on causal_lm dataset...")
     loss = pretrain_model.fit(train_text_dataset,
-                              nb_epoch=5,
+                              nb_epoch=2,
                               max_checkpoints_to_keep=1)
     print("Training Loss:", loss)
 
