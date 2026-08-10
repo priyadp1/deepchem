@@ -131,7 +131,10 @@ def continued_pretraining(batch_size=100):
 
     print(f"Starting continued pretraining on causal_lm dataset "
           f"({num_gpus} GPU(s))...")
-    trainer.fit(train_text_dataset, nb_epoch=2, max_checkpoints_to_keep=1)
+    trainer.fit(train_text_dataset,
+               nb_epoch=2,
+               max_checkpoints_to_keep=1,
+               num_workers=0)
 
     del trainer
     gc.collect()
