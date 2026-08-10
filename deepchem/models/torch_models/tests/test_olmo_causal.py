@@ -15,21 +15,8 @@ SMILES = [
 ]
 
 
-def quantization_config():
-    if not torch.cuda.is_available():
-        # bitsandbytes 4-bit quantization requires a CUDA GPU.
-        return None
-    from transformers import BitsAndBytesConfig
-    return BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.float16,
-    )
-
-
 @pytest.mark.hf
-def test_olmo_causal_lm():
+def test_olmo_causal_lm(quantization_config):
     pytest.skip(
         "Skipping slow OLMo test that downloads and runs the full model.")
     from deepchem.models.torch_models.olmo import Olmo
@@ -38,7 +25,7 @@ def test_olmo_causal_lm():
                  tokenizer_path="allenai/OLMo-1B-hf",
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
-                 quantization_config=quantization_config(),
+                 quantization_config=quantization_config,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
     model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
@@ -66,7 +53,7 @@ def test_olmo_causal_lm():
 
 
 @pytest.mark.hf
-def test_olmo_causal_lm_overfit():
+def test_olmo_causal_lm_overfit(quantization_config):
     pytest.skip(
         "Skipping slow OLMo test that downloads and runs the full model.")
     from deepchem.models.torch_models.olmo import Olmo
@@ -75,7 +62,7 @@ def test_olmo_causal_lm_overfit():
                  tokenizer_path="allenai/OLMo-1B-hf",
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
-                 quantization_config=quantization_config(),
+                 quantization_config=quantization_config,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
     model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
