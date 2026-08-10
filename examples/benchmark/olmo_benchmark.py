@@ -93,7 +93,7 @@ def run_generation(hf_model, quantized):
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 
 
-def continued_pretraining():
+def continued_pretraining(batch_size=100):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     print("\n Task: causal_lm (continued pretraining)")
@@ -110,16 +110,30 @@ def continued_pretraining():
                           model_dir="./olmo_checkpoints_causal_lm",
                           learning_rate=1e-5,
                           gradient_checkpointing=True,
-                          skip_weight_init=True)
+                          skip_weight_init=True,
+                          batch_size=batch_size)
 
     pretrain_model.load_from_pretrained("allenai/OLMo-1B-hf",
                                         from_hf_checkpoint=True)
 
-    print("Starting continued pretraining on causal_lm dataset...")
-    loss = pretrain_model.fit(train_text_dataset,
-                              nb_epoch=2,
-                              max_checkpoints_to_keep=1)
-    print("Training Loss:", loss)
+    num_gpus = torch.cuda.device_count()
+    trainer = LightningTorchModel(
+        model=pretrain_model,
+        batch_size=batch_size,
+        model_dir="./olmo_checkpoints_causal_lm",
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=-1 if torch.cuda.is_available() else 1,
+        strategy="ddp" if num_gpus > 1 else "auto",
+        enable_progress_bar=True,
+        log_every_n_steps=1)
+
+    print(f"Starting continued pretraining on causal_lm dataset "
+          f"({num_gpus} GPU(s))...")
+    trainer.fit(train_text_dataset, nb_epoch=2, max_checkpoints_to_keep=1)
+
+    del trainer
+    gc.collect()
+    torch.cuda.empty_cache()
 
     run_generation(pretrain_model, quantized=True)
 
