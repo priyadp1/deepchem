@@ -29,7 +29,8 @@ def build_pretraining_delaney_dataset():
     text_list = [
         f"SMILES: {i}. Solubility: {j}." for i, j in zip(smiles, solubility)
     ]
-    dataset = dc.data.NumpyDataset(X=np.array(text_list), y=np.array(text_list))
+    dataset = dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                             y=np.array(text_list))
     return dc.splits.RandomSplitter().train_test_split(dataset,
                                                        frac_train=0.8,
                                                        seed=42)
@@ -43,7 +44,8 @@ def build_pretraining_bbbp_dataset():
     text_list = [
         f"SMILES: {i}. BBB Permeant: {int(j)}." for i, j in zip(smiles, labels)
     ]
-    dataset = dc.data.NumpyDataset(X=np.array(text_list), y=np.array(text_list))
+    dataset = dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                             y=np.array(text_list))
     return dc.splits.RandomSplitter().train_test_split(dataset,
                                                        frac_train=0.8,
                                                        seed=42)
@@ -99,7 +101,7 @@ def continued_pretraining(batch_size=100):
     print("\n Task: causal_lm (continued pretraining)")
     delaney_train_dataset, _ = build_pretraining_delaney_dataset()
     bbbp_train_dataset, _ = build_pretraining_bbbp_dataset()
-    train_text_dataset = dc.data.NumpyDataset(
+    train_text_dataset = dc.data.DiskDataset.from_numpy(
         X=np.concatenate([delaney_train_dataset.X, bbbp_train_dataset.X]),
         y=np.concatenate([delaney_train_dataset.y, bbbp_train_dataset.y]))
 
@@ -157,7 +159,7 @@ def build_regression_dataset():
     smiles = df["smiles"].values
     solubility = df["measured log solubility in mols per litre"].values.astype(
         np.float32).reshape(-1, 1)
-    dataset = dc.data.NumpyDataset(X=smiles, y=solubility)
+    dataset = dc.data.DiskDataset.from_numpy(X=smiles, y=solubility)
     return dc.splits.RandomSplitter().train_test_split(dataset,
                                                        frac_train=0.8,
                                                        seed=42)
