@@ -57,13 +57,18 @@ def run_generation(hf_model, quantized):
         "Cc1occc1C(=O)Nc2ccccc2."
     ]
 
+    def _restore_from_lightning_checkpoint():
+        LightningTorchModel(model=hf_model,
+                            batch_size=hf_model.batch_size,
+                            model_dir=hf_model.model_dir).restore()
+
     if quantized:
-        hf_model.load_from_pretrained()
+        _restore_from_lightning_checkpoint()
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
         hf_model.model.to("cpu")
         torch.cuda.empty_cache()
-        hf_model.load_from_pretrained()
+        _restore_from_lightning_checkpoint()
         hf_model.model.to(device)
 
     # Sanity check for NaN or Inf in the logits before generation
