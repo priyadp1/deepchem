@@ -100,7 +100,7 @@ def run_generation(hf_model, quantized):
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 
 
-def continued_pretraining(batch_size=100):
+def continued_pretraining(batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     print("\n Task: causal_lm (continued pretraining)")
@@ -173,7 +173,7 @@ def build_regression_dataset():
                                                        seed=42)
 
 
-def finetune_regression(nb_epoch=20, batch_size=128):
+def finetune_regression(nb_epoch=20, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset = build_regression_dataset()
@@ -250,7 +250,7 @@ def build_classification_dataset():
     return load_bbbp()
 
 
-def finetune_classification(nb_epoch=20, batch_size=128):
+def finetune_classification(nb_epoch=20, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset = build_classification_dataset()
