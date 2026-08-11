@@ -60,7 +60,7 @@ def run_generation(hf_model, quantized):
     def _restore_from_lightning_checkpoint():
         LightningTorchModel(model=hf_model,
                             batch_size=hf_model.batch_size,
-                            model_dir=hf_model.model_dir).restore()
+                            model_dir=hf_model.model_dir).restore(strict=False)
 
     if quantized:
         _restore_from_lightning_checkpoint()
