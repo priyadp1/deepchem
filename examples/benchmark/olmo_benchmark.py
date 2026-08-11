@@ -29,11 +29,8 @@ def build_pretraining_delaney_dataset():
     text_list = [
         f"SMILES: {i}. Solubility: {j}." for i, j in zip(smiles, solubility)
     ]
-    dataset = dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                             y=np.array(text_list))
-    return dc.splits.RandomSplitter().train_test_split(dataset,
-                                                       frac_train=0.8,
-                                                       seed=42)
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
 
 
 def build_pretraining_bbbp_dataset():
@@ -44,11 +41,8 @@ def build_pretraining_bbbp_dataset():
     text_list = [
         f"SMILES: {i}. BBB Permeant: {int(j)}." for i, j in zip(smiles, labels)
     ]
-    dataset = dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                             y=np.array(text_list))
-    return dc.splits.RandomSplitter().train_test_split(dataset,
-                                                       frac_train=0.8,
-                                                       seed=42)
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
 
 
 def run_generation(hf_model, quantized):
@@ -104,11 +98,11 @@ def continued_pretraining(batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     print("\n Task: causal_lm (continued pretraining)")
-    delaney_train_dataset, _ = build_pretraining_delaney_dataset()
-    bbbp_train_dataset, _ = build_pretraining_bbbp_dataset()
+    delaney_dataset = build_pretraining_delaney_dataset()
+    bbbp_dataset = build_pretraining_bbbp_dataset()
     train_text_dataset = dc.data.DiskDataset.from_numpy(
-        X=np.concatenate([delaney_train_dataset.X, bbbp_train_dataset.X]),
-        y=np.concatenate([delaney_train_dataset.y, bbbp_train_dataset.y]))
+        X=np.concatenate([delaney_dataset.X, bbbp_dataset.X]),
+        y=np.concatenate([delaney_dataset.y, bbbp_dataset.y]))
 
     pretrain_model = Olmo(task_type="causal_lm",
                           tokenizer_path="allenai/OLMo-1B-hf",
@@ -137,7 +131,7 @@ def continued_pretraining(batch_size=8):
     print(f"Starting continued pretraining on causal_lm dataset "
           f"({num_gpus} GPU(s))...")
     trainer.fit(train_text_dataset,
-               nb_epoch=2,
+               nb_epoch=5,
                max_checkpoints_to_keep=1,
                num_workers=0)
 
@@ -164,9 +158,12 @@ FINETUNE_DIR = "./olmo_checkpoints_regression"
 
 def build_regression_dataset():
     df = pd.read_csv("datasets/delaney-processed.csv")
-    smiles = df["smiles"].values
-    solubility = df["measured log solubility in mols per litre"].values.astype(
-        np.float32).reshape(-1, 1)
+    # Skip the first MAX_SAMPLES rows: those are the continued-pretraining
+    # corpus (build_pretraining_delaney_dataset), so excluding them here
+    # keeps this dataset disjoint from it.
+    smiles = df["smiles"].values[MAX_SAMPLES:]
+    solubility = df["measured log solubility in mols per litre"].values[
+        MAX_SAMPLES:].astype(np.float32).reshape(-1, 1)
     dataset = dc.data.DiskDataset.from_numpy(X=smiles, y=solubility)
     return dc.splits.RandomSplitter().train_test_split(dataset,
                                                        frac_train=0.8,
