@@ -131,22 +131,28 @@ def continued_pretraining(batch_size=8):
     print(f"Starting continued pretraining on causal_lm dataset "
           f"({num_gpus} GPU(s))...")
     trainer.fit(train_text_dataset,
-               nb_epoch=5,
-               max_checkpoints_to_keep=1,
-               num_workers=0)
+                nb_epoch=5,
+                max_checkpoints_to_keep=1,
+                num_workers=0)
+
+    is_main_process = trainer.trainer.is_global_zero
 
     del trainer
     gc.collect()
     torch.cuda.empty_cache()
 
-    run_generation(pretrain_model, quantized=True)
+    if is_main_process:
+        run_generation(pretrain_model, quantized=True)
 
-    if pretrain_model.finetune_strategy in ("lora", "qlora"):
-        pretrain_model.model = pretrain_model.model.merge_and_unload()
+        if pretrain_model.finetune_strategy in ("lora", "qlora"):
+            pretrain_model.model = pretrain_model.model.merge_and_unload()
 
-    shutil.rmtree(PRETRAINED_DIR, ignore_errors=True)
-    pretrain_model.model.save_pretrained(PRETRAINED_DIR)
-    pretrain_model.tokenizer.save_pretrained(PRETRAINED_DIR)
+        shutil.rmtree(PRETRAINED_DIR, ignore_errors=True)
+        pretrain_model.model.save_pretrained(PRETRAINED_DIR)
+        pretrain_model.tokenizer.save_pretrained(PRETRAINED_DIR)
+
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier()
 
     del pretrain_model
     gc.collect()
