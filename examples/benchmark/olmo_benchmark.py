@@ -34,10 +34,9 @@ def build_pretraining_delaney_dataset():
 
 
 def build_pretraining_bbbp_dataset():
-    train_dataset, test_dataset = load_bbbp()
-    smiles = np.concatenate([train_dataset.X, test_dataset.X])[:MAX_SAMPLES]
-    labels = np.concatenate([train_dataset.y,
-                             test_dataset.y]).flatten()[:MAX_SAMPLES]
+    train_dataset, _ = load_bbbp()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
     text_list = [
         f"SMILES: {i}. BBB Permeant: {int(j)}." for i, j in zip(smiles, labels)
     ]
