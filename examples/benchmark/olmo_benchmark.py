@@ -175,7 +175,7 @@ def build_regression_dataset():
                                                        seed=42)
 
 
-def finetune_regression(nb_epoch=20, batch_size=8):
+def finetune_regression(nb_epoch=10, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset = build_regression_dataset()
@@ -254,7 +254,7 @@ def build_classification_dataset():
     return load_bbbp()
 
 
-def finetune_classification(nb_epoch=20, batch_size=8):
+def finetune_classification(nb_epoch=10, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset = build_classification_dataset()
