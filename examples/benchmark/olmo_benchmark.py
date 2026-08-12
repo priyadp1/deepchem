@@ -220,6 +220,8 @@ def finetune_regression(nb_epoch=20, batch_size=8):
     trainer.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
     elapsed = time.time() - t0
 
+    finetune_model.model.to(finetune_model.device)
+
     train_rms = finetune_model.evaluate(train_dataset,
                                         metrics=[metric])["rms_score"]
     test_rms = finetune_model.evaluate(test_dataset,
@@ -297,6 +299,8 @@ def finetune_classification(nb_epoch=20, batch_size=8):
     t0 = time.time()
     trainer.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
     elapsed = time.time() - t0
+
+    finetune_model.model.to(finetune_model.device)
 
     train_auc = finetune_model.evaluate(train_dataset,
                                         metrics=[metric])["roc_auc_score"]
