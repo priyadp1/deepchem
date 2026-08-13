@@ -33,6 +33,20 @@ def build_pretraining_delaney_dataset():
                                           y=np.array(text_list))
 
 
+def build_pretraining_tox21_dataset():
+    train_dataset, _ = dc.molnet.load_tox21(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
+    text_list = [
+        f"SMILES: {i}. Toxicity: {int(j)}." for i, j in zip(smiles, labels)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
 def build_pretraining_bbbp_dataset():
     train_dataset, _ = load_bbbp()
     smiles = train_dataset.X[:MAX_SAMPLES]
@@ -99,9 +113,10 @@ def continued_pretraining(batch_size=8):
     print("\n Task: causal_lm (continued pretraining)")
     delaney_dataset = build_pretraining_delaney_dataset()
     bbbp_dataset = build_pretraining_bbbp_dataset()
+    tox21_dataset = build_pretraining_tox21_dataset()
     train_text_dataset = dc.data.DiskDataset.from_numpy(
-        X=np.concatenate([delaney_dataset.X, bbbp_dataset.X]),
-        y=np.concatenate([delaney_dataset.y, bbbp_dataset.y]))
+        X=np.concatenate([delaney_dataset.X, bbbp_dataset.X, tox21_dataset.X]),
+        y=np.concatenate([delaney_dataset.y, bbbp_dataset.y, tox21_dataset.y]))
 
     pretrain_model = Olmo(task_type="causal_lm",
                           tokenizer_path="allenai/OLMo-1B-hf",
@@ -161,7 +176,7 @@ def continued_pretraining(batch_size=8):
 FINETUNE_DIR = "./olmo_checkpoints_regression"
 
 
-def build_regression_dataset():
+def build_delaney_regression_dataset():
     df = pd.read_csv("datasets/delaney-processed.csv")
     # Skip the first MAX_SAMPLES rows: those are the continued-pretraining
     # corpus (build_pretraining_delaney_dataset), so excluding them here
@@ -170,24 +185,31 @@ def build_regression_dataset():
     solubility = df["measured log solubility in mols per litre"].values[
         MAX_SAMPLES:].astype(np.float32).reshape(-1, 1)
     dataset = dc.data.DiskDataset.from_numpy(X=smiles, y=solubility)
-    return dc.splits.RandomSplitter().train_test_split(dataset,
-                                                       frac_train=0.8,
-                                                       seed=42)
+    train_dataset, test_dataset = dc.splits.RandomSplitter().train_test_split(
+        dataset, frac_train=0.8, seed=42)
+    return train_dataset, test_dataset, 1
 
 
-def finetune_regression(nb_epoch=10, batch_size=8):
+REGRESSION_DATASETS = {
+    "delaney": build_delaney_regression_dataset,
+}
+
+
+def finetune_regression(dataset_name="delaney", nb_epoch=10, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    train_dataset, test_dataset = build_regression_dataset()
-    print(f"Train size: {len(train_dataset)}, Test size: {len(test_dataset)}")
+    train_dataset, test_dataset, n_tasks = REGRESSION_DATASETS[dataset_name]()
+    print(f"[{dataset_name}] Train size: {len(train_dataset)}, "
+          f"Test size: {len(test_dataset)}, n_tasks: {n_tasks}")
 
+    model_dir = f"{FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="regression",
                           tokenizer_path="allenai/OLMo-1B-hf",
-                          n_tasks=1,
+                          n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
                           gradient_checkpointing=True,
-                          model_dir=FINETUNE_DIR,
+                          model_dir=model_dir,
                           batch_size=batch_size,
                           learning_rate=3e-5,
                           skip_weight_init=True)
@@ -208,7 +230,7 @@ def finetune_regression(nb_epoch=10, batch_size=8):
     trainer = LightningTorchModel(
         model=finetune_model,
         batch_size=batch_size,
-        model_dir=FINETUNE_DIR,
+        model_dir=model_dir,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=-1 if torch.cuda.is_available() else 1,
         strategy="ddp" if num_gpus > 1 else "auto",
@@ -228,11 +250,11 @@ def finetune_regression(nb_epoch=10, batch_size=8):
     peak_mem = (torch.cuda.max_memory_allocated() /
                 1e9 if torch.cuda.is_available() else 0.0)
 
-    print(f"After {nb_epoch} epochs on {num_gpus} GPU(s) ({elapsed:.1f}s): "
-          f"train_rms={train_rms:.3f} test_rms={test_rms:.3f} "
-          f"peak_mem={peak_mem:.2f}GB")
-    print(f"Checkpoints saved under "
-          f"{os.path.join(FINETUNE_DIR, 'checkpoints')}")
+    print(
+        f"[{dataset_name}] After {nb_epoch} epochs on {num_gpus} GPU(s) "
+        f"({elapsed:.1f}s): train_rms={train_rms:.3f} test_rms={test_rms:.3f} "
+        f"peak_mem={peak_mem:.2f}GB")
+    print(f"Checkpoints saved under {os.path.join(model_dir, 'checkpoints')}")
 
     del finetune_model, trainer
     gc.collect()
@@ -250,23 +272,49 @@ def load_bbbp():
     return train_dataset, test_dataset
 
 
-def build_classification_dataset():
-    return load_bbbp()
+def build_bbbp_classification_dataset():
+    train_dataset, test_dataset = load_bbbp()
+    return train_dataset, test_dataset, 1
 
 
-def finetune_classification(nb_epoch=10, batch_size=8):
+# name -> loader returning (train_dataset, test_dataset, n_tasks). Add a
+# dataset here to fine-tune on it too.
+CLASSIFICATION_DATASETS = {
+    "bbbp": build_bbbp_classification_dataset,
+}
+
+
+def build_tox21_multitask_classification_dataset():
+    tasks, (train_dataset, _, test_dataset), _ = dc.molnet.load_tox21(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset, len(tasks)
+
+
+# name -> loader returning (train_dataset, test_dataset, n_tasks). Add a
+# dataset here to fine-tune on it too.
+MULTITASK_CLASSIFICATION_DATASETS = {
+    "tox21": build_tox21_multitask_classification_dataset,
+}
+
+
+def finetune_classification(dataset_name="bbbp", nb_epoch=10, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    train_dataset, test_dataset = build_classification_dataset()
-    print(f"Train size: {len(train_dataset)}, Test size: {len(test_dataset)}")
+    train_dataset, test_dataset, n_tasks = CLASSIFICATION_DATASETS[
+        dataset_name]()
+    print(f"[{dataset_name}] Train size: {len(train_dataset)}, "
+          f"Test size: {len(test_dataset)}, n_tasks: {n_tasks}")
 
+    model_dir = f"{CLASSIFICATION_FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="classification",
                           tokenizer_path="allenai/OLMo-1B-hf",
-                          n_tasks=1,
+                          n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
                           gradient_checkpointing=True,
-                          model_dir=CLASSIFICATION_FINETUNE_DIR,
+                          model_dir=model_dir,
                           batch_size=batch_size,
                           learning_rate=3e-5,
                           skip_weight_init=True)
@@ -288,7 +336,7 @@ def finetune_classification(nb_epoch=10, batch_size=8):
     trainer = LightningTorchModel(
         model=finetune_model,
         batch_size=batch_size,
-        model_dir=CLASSIFICATION_FINETUNE_DIR,
+        model_dir=model_dir,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=-1 if torch.cuda.is_available() else 1,
         strategy="ddp" if num_gpus > 1 else "auto",
@@ -308,11 +356,83 @@ def finetune_classification(nb_epoch=10, batch_size=8):
     peak_mem = (torch.cuda.max_memory_allocated() /
                 1e9 if torch.cuda.is_available() else 0.0)
 
-    print(f"After {nb_epoch} epochs on {num_gpus} GPU(s) ({elapsed:.1f}s): "
-          f"train_auc={train_auc:.3f} test_auc={test_auc:.3f} "
-          f"peak_mem={peak_mem:.2f}GB")
-    print(f"Checkpoints saved under "
-          f"{os.path.join(CLASSIFICATION_FINETUNE_DIR, 'checkpoints')}")
+    print(
+        f"[{dataset_name}] After {nb_epoch} epochs on {num_gpus} GPU(s) "
+        f"({elapsed:.1f}s): train_auc={train_auc:.3f} test_auc={test_auc:.3f} "
+        f"peak_mem={peak_mem:.2f}GB")
+    print(f"Checkpoints saved under {os.path.join(model_dir, 'checkpoints')}")
+
+    del finetune_model, trainer
+    gc.collect()
+    torch.cuda.empty_cache()
+
+
+MULTITASK_CLASSIFICATION_FINETUNE_DIR = "./olmo_checkpoints_multitask_classification"
+
+
+def finetune_multitask_classification(dataset_name="tox21",
+                                      nb_epoch=10,
+                                      batch_size=8):
+    dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+    train_dataset, test_dataset, n_tasks = MULTITASK_CLASSIFICATION_DATASETS[
+        dataset_name]()
+    print(f"[{dataset_name}] Train size: {len(train_dataset)}, "
+          f"Test size: {len(test_dataset)}, n_tasks: {n_tasks}")
+
+    model_dir = f"{MULTITASK_CLASSIFICATION_FINETUNE_DIR}_{dataset_name}"
+    finetune_model = Olmo(task_type="mtc",
+                          tokenizer_path="allenai/OLMo-1B-hf",
+                          n_tasks=n_tasks,
+                          torch_dtype=dtype,
+                          finetune_strategy="qlora",
+                          gradient_checkpointing=True,
+                          model_dir=model_dir,
+                          batch_size=batch_size,
+                          learning_rate=3e-5,
+                          skip_weight_init=True)
+
+    finetune_model.load_from_pretrained(PRETRAINED_DIR, from_hf_checkpoint=True)
+
+    metric = dc.metrics.Metric(dc.metrics.roc_auc_score)
+
+    baseline_auc = finetune_model.evaluate(test_dataset,
+                                           metrics=[metric])["roc_auc_score"]
+    print(f"Baseline test ROC-AUC (random mtc head, pretrained backbone): "
+          f"{baseline_auc:.3f}")
+
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+
+    num_gpus = torch.cuda.device_count()
+    trainer = LightningTorchModel(
+        model=finetune_model,
+        batch_size=batch_size,
+        model_dir=model_dir,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=-1 if torch.cuda.is_available() else 1,
+        strategy="ddp" if num_gpus > 1 else "auto",
+        enable_progress_bar=True,
+        log_every_n_steps=1)
+
+    t0 = time.time()
+    trainer.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
+    elapsed = time.time() - t0
+
+    finetune_model.model.to(finetune_model.device)
+
+    train_auc = finetune_model.evaluate(train_dataset,
+                                        metrics=[metric])["roc_auc_score"]
+    test_auc = finetune_model.evaluate(test_dataset,
+                                       metrics=[metric])["roc_auc_score"]
+    peak_mem = (torch.cuda.max_memory_allocated() /
+                1e9 if torch.cuda.is_available() else 0.0)
+
+    print(
+        f"[{dataset_name}] After {nb_epoch} epochs on {num_gpus} GPU(s) "
+        f"({elapsed:.1f}s): train_auc={train_auc:.3f} test_auc={test_auc:.3f} "
+        f"peak_mem={peak_mem:.2f}GB")
+    print(f"Checkpoints saved under {os.path.join(model_dir, 'checkpoints')}")
 
     del finetune_model, trainer
     gc.collect()
@@ -321,5 +441,9 @@ def finetune_classification(nb_epoch=10, batch_size=8):
 
 if __name__ == "__main__":
     continued_pretraining()
-    finetune_regression()
-    finetune_classification()
+    for dataset_name in REGRESSION_DATASETS:
+        finetune_regression(dataset_name)
+    for dataset_name in CLASSIFICATION_DATASETS:
+        finetune_classification(dataset_name)
+    for dataset_name in MULTITASK_CLASSIFICATION_DATASETS:
+        finetune_multitask_classification(dataset_name)
