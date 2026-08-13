@@ -21,14 +21,14 @@ def test_olmo_single_label_regression(quantization_config):
     from deepchem.models.torch_models.olmo import Olmo
 
     model = Olmo(task_type="regression",
-                 tokenizer_path="allenai/OLMo-7B-hf",
+                 tokenizer_path="allenai/OLMo-1B-hf",
                  n_tasks=1,
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
                  quantization_config=quantization_config,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
-    model.load_from_pretrained("allenai/OLMo-7B-hf", from_hf_checkpoint=True)
+    model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
 
     dataset = dc.data.NumpyDataset(SMILES, np.array([[1.0], [0.0]]))
 
@@ -46,14 +46,14 @@ def test_olmo_single_label_regression_overfit(quantization_config):
     from deepchem.models.torch_models.olmo import Olmo
 
     model = Olmo(task_type="regression",
-                 tokenizer_path="allenai/OLMo-7B-hf",
+                 tokenizer_path="allenai/OLMo-1B-hf",
                  n_tasks=1,
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
                  quantization_config=quantization_config,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
-    model.load_from_pretrained("allenai/OLMo-7B-hf", from_hf_checkpoint=True)
+    model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
 
     dataset = dc.data.NumpyDataset(SMILES, np.array([[1.0], [0.0]]))
 
@@ -74,18 +74,18 @@ def test_olmo_single_label_regression_load_from_pretrained(tmpdir):
     finetune_model_dir = os.path.join(tmpdir, 'finetune')
 
     pretrain_model = Olmo(task_type="regression",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=1,
                           torch_dtype=torch.float16
                           if torch.cuda.is_available() else torch.float32,
                           skip_weight_init=True,
                           gradient_checkpointing=True)
-    pretrain_model.load_from_pretrained("allenai/OLMo-7B-hf",
+    pretrain_model.load_from_pretrained("allenai/OLMo-1B-hf",
                                         from_hf_checkpoint=True)
 
     pretrain_model.save_checkpoint(model_dir=pretrain_model_dir)
     finetune_model = Olmo(task_type="regression",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=1,
                           torch_dtype=torch.float16
                           if torch.cuda.is_available() else torch.float32,
@@ -115,19 +115,19 @@ def test_olmo_single_label_regression_load_from_pretrained(tmpdir):
 def test_olmo_single_label_regression_save_reload(tmpdir):
     from deepchem.models.torch_models.olmo import Olmo
     model = Olmo(task_type="regression",
-                 tokenizer_path="allenai/OLMo-7B-hf",
+                 tokenizer_path="allenai/OLMo-1B-hf",
                  n_tasks=1,
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
                  model_dir=tmpdir,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
-    model.load_from_pretrained("allenai/OLMo-7B-hf", from_hf_checkpoint=True)
+    model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
     model._ensure_built()
     model.save_checkpoint()
 
     model_new = Olmo(task_type="regression",
-                     tokenizer_path="allenai/OLMo-7B-hf",
+                     tokenizer_path="allenai/OLMo-1B-hf",
                      n_tasks=1,
                      torch_dtype=torch.float16
                      if torch.cuda.is_available() else torch.float32,
@@ -154,14 +154,14 @@ def test_olmo_multi_label_regression(quantization_config):
     from deepchem.models.torch_models.olmo import Olmo
 
     model = Olmo(task_type="regression",
-                 tokenizer_path="allenai/OLMo-7B-hf",
+                 tokenizer_path="allenai/OLMo-1B-hf",
                  n_tasks=2,
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
                  quantization_config=quantization_config,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
-    model.load_from_pretrained("allenai/OLMo-7B-hf", from_hf_checkpoint=True)
+    model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
 
     dataset = dc.data.NumpyDataset(SMILES, np.array([[1.0, 0.0], [0.0, 1.0]]))
 
@@ -179,14 +179,14 @@ def test_olmo_multi_label_regression_overfit(quantization_config):
     from deepchem.models.torch_models.olmo import Olmo
 
     model = Olmo(task_type="mtr",
-                 tokenizer_path="allenai/OLMo-7B-hf",
+                 tokenizer_path="allenai/OLMo-1B-hf",
                  n_tasks=2,
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
                  quantization_config=quantization_config,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
-    model.load_from_pretrained("allenai/OLMo-7B-hf", from_hf_checkpoint=True)
+    model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
 
     dataset = dc.data.NumpyDataset(SMILES, np.array([[1.0, 0.0], [0.0, 1.0]]))
 
@@ -207,18 +207,18 @@ def test_olmo_multi_label_regression_load_from_pretrained(tmpdir):
     finetune_model_dir = os.path.join(tmpdir, 'finetune')
 
     pretrain_model = Olmo(task_type="mtr",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=2,
                           torch_dtype=torch.float16
                           if torch.cuda.is_available() else torch.float32,
                           skip_weight_init=True,
                           gradient_checkpointing=True)
-    pretrain_model.load_from_pretrained("allenai/OLMo-7B-hf",
+    pretrain_model.load_from_pretrained("allenai/OLMo-1B-hf",
                                         from_hf_checkpoint=True)
 
     pretrain_model.save_checkpoint(model_dir=pretrain_model_dir)
     finetune_model = Olmo(task_type="mtr",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=2,
                           torch_dtype=torch.float16
                           if torch.cuda.is_available() else torch.float32,
@@ -248,19 +248,19 @@ def test_olmo_multi_label_regression_load_from_pretrained(tmpdir):
 def test_olmo_multi_label_regression_save_reload(tmpdir):
     from deepchem.models.torch_models.olmo import Olmo
     model = Olmo(task_type="mtr",
-                 tokenizer_path="allenai/OLMo-7B-hf",
+                 tokenizer_path="allenai/OLMo-1B-hf",
                  n_tasks=2,
                  torch_dtype=torch.float16
                  if torch.cuda.is_available() else torch.float32,
                  model_dir=tmpdir,
                  skip_weight_init=True,
                  gradient_checkpointing=True)
-    model.load_from_pretrained("allenai/OLMo-7B-hf", from_hf_checkpoint=True)
+    model.load_from_pretrained("allenai/OLMo-1B-hf", from_hf_checkpoint=True)
     model._ensure_built()
     model.save_checkpoint()
 
     model_new = Olmo(task_type="mtr",
-                     tokenizer_path="allenai/OLMo-7B-hf",
+                     tokenizer_path="allenai/OLMo-1B-hf",
                      n_tasks=2,
                      torch_dtype=torch.float16
                      if torch.cuda.is_available() else torch.float32,

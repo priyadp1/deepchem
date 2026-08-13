@@ -49,7 +49,7 @@ def test_olmo_lightning_fit_and_predict(smiles_regression_dataset):
     """Test QLoRA regression training and prediction via PyTorch Lightning DDP."""
     from deepchem.models.torch_models.olmo import Olmo
 
-    tokenizer_path = 'allenai/OLMo-7B-hf'
+    tokenizer_path = 'allenai/OLMo-1B-hf'
 
     model = Olmo(task_type="regression",
                  tokenizer_path=tokenizer_path,
