@@ -34,12 +34,12 @@ def build_pretraining_delaney_dataset():
 
 
 def build_pretraining_tox21_dataset():
-    train_dataset, _ = dc.molnet.load_tox21(
+    _, (train_dataset, _, _), _ = dc.molnet.load_tox21(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
         splitter='random',
         transformers=[])
     smiles = train_dataset.X[:MAX_SAMPLES]
-    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
+    labels = train_dataset.y[:MAX_SAMPLES, 0]
     text_list = [
         f"SMILES: {i}. Toxicity: {int(j)}." for i, j in zip(smiles, labels)
     ]
