@@ -1,4 +1,4 @@
-import os
+﻿import os
 import pandas as pd
 import pytest
 import gc
@@ -34,7 +34,7 @@ def test_olmo_lora_qlora_at_init(strategy):
     from deepchem.models.torch_models.olmo import Olmo
 
     model = Olmo(task_type="regression",
-                 tokenizer_path="allenai/OLMo-1B-hf",
+                 tokenizer_path="allenai/OLMo-7B-hf",
                  n_tasks=1,
                  finetune_strategy=strategy,
                  torch_dtype="float16")
@@ -67,7 +67,7 @@ def test_olmo_lora_qlora_fit_predict(smiles_regression_dataset, strategy):
     """Test that a LoRA/QLoRA-wrapped regression model can fit and predict."""
     from deepchem.models.torch_models.olmo import Olmo
 
-    tokenizer_path = "allenai/OLMo-1B-hf"
+    tokenizer_path = "allenai/OLMo-7B-hf"
     model = Olmo(task_type="regression",
                  tokenizer_path=tokenizer_path,
                  n_tasks=1,
