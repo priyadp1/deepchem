@@ -33,11 +33,15 @@ def test_olmo_lora_qlora_at_init(strategy):
     from peft import PeftModel
     from deepchem.models.torch_models.olmo import Olmo
 
+    tokenizer_path = "allenai/OLMo-7B-hf"
     model = Olmo(task_type="regression",
-                 tokenizer_path="allenai/OLMo-7B-hf",
+                 tokenizer_path=tokenizer_path,
                  n_tasks=1,
                  finetune_strategy=strategy,
                  torch_dtype="float16")
+
+    if strategy == "qlora":
+        model.load_from_pretrained(tokenizer_path, from_hf_checkpoint=True)
 
     assert isinstance(model.model, PeftModel)
 
