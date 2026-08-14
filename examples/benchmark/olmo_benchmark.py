@@ -58,6 +58,100 @@ def build_pretraining_bbbp_dataset():
                                           y=np.array(text_list))
 
 
+def build_pretraining_bace_dataset():
+    train_dataset, _ = load_bace()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
+    text_list = [
+        f"SMILES: {i}. BACE Inhibitor: {int(j)}."
+        for i, j in zip(smiles, labels)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
+def build_pretraining_hiv_dataset():
+    train_dataset, _ = load_hiv()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
+    text_list = [
+        f"SMILES: {i}. HIV Active: {int(j)}." for i, j in zip(smiles, labels)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
+def build_pretraining_sider_dataset():
+    train_dataset, _ = load_sider()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    labels = train_dataset.y[:MAX_SAMPLES, 0]
+    text_list = [
+        f"SMILES: {i}. Side Effect: {int(j)}." for i, j in zip(smiles, labels)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
+def build_pretraining_clintox_dataset():
+    train_dataset, _ = load_clintox()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    labels = train_dataset.y[:MAX_SAMPLES, 0]
+    text_list = [
+        f"SMILES: {i}. FDA Approved: {int(j)}." for i, j in zip(smiles, labels)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
+def build_pretraining_lipo_dataset():
+    train_dataset, _ = load_lipo()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    values = train_dataset.y.flatten()[:MAX_SAMPLES]
+    text_list = [
+        f"SMILES: {i}. Lipophilicity: {j}." for i, j in zip(smiles, values)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
+def build_pretraining_freesolv_dataset():
+    train_dataset, _ = load_freesolv()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    values = train_dataset.y.flatten()[:MAX_SAMPLES]
+    text_list = [
+        f"SMILES: {i}. Hydration Free Energy: {j}."
+        for i, j in zip(smiles, values)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
+def build_pretraining_clearance_dataset():
+    train_dataset, _ = load_clearance()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    values = train_dataset.y.flatten()[:MAX_SAMPLES]
+    text_list = [
+        f"SMILES: {i}. Clearance: {j}." for i, j in zip(smiles, values)
+    ]
+    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
+                                          y=np.array(text_list))
+
+
+# Builders concatenated together into the continued-pretraining corpus.
+PRETRAINING_DATASET_BUILDERS = [
+    build_pretraining_delaney_dataset,
+    build_pretraining_bbbp_dataset,
+    build_pretraining_tox21_dataset,
+    build_pretraining_bace_dataset,
+    build_pretraining_hiv_dataset,
+    build_pretraining_sider_dataset,
+    build_pretraining_clintox_dataset,
+    build_pretraining_lipo_dataset,
+    build_pretraining_freesolv_dataset,
+    build_pretraining_clearance_dataset,
+]
+
+
 def run_generation(hf_model, quantized):
     prompts = [
         "OCC3OC(OCC2OC(OC(C#N)c1ccccc1)C(O)C(O)C2O)C(O)C(O)C3O.",
@@ -111,12 +205,12 @@ def continued_pretraining(batch_size=15):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     print("\n Task: causal_lm (continued pretraining)")
-    delaney_dataset = build_pretraining_delaney_dataset()
-    bbbp_dataset = build_pretraining_bbbp_dataset()
-    tox21_dataset = build_pretraining_tox21_dataset()
+    pretraining_datasets = [
+        builder() for builder in PRETRAINING_DATASET_BUILDERS
+    ]
     train_text_dataset = dc.data.DiskDataset.from_numpy(
-        X=np.concatenate([delaney_dataset.X, bbbp_dataset.X, tox21_dataset.X]),
-        y=np.concatenate([delaney_dataset.y, bbbp_dataset.y, tox21_dataset.y]))
+        X=np.concatenate([d.X for d in pretraining_datasets]),
+        y=np.concatenate([d.y for d in pretraining_datasets]))
 
     pretrain_model = Olmo(task_type="causal_lm",
                           tokenizer_path="allenai/OLMo-1B-hf",
@@ -190,8 +284,32 @@ def build_delaney_regression_dataset():
     return train_dataset, test_dataset, 1
 
 
+def build_bace_regression_dataset():
+    train_dataset, test_dataset = load_bace_pic50()
+    return train_dataset, test_dataset, 1
+
+
+def build_lipo_regression_dataset():
+    train_dataset, test_dataset = load_lipo()
+    return train_dataset, test_dataset, 1
+
+
+def build_freesolv_regression_dataset():
+    train_dataset, test_dataset = load_freesolv()
+    return train_dataset, test_dataset, 1
+
+
+def build_clearance_regression_dataset():
+    train_dataset, test_dataset = load_clearance()
+    return train_dataset, test_dataset, 1
+
+
 REGRESSION_DATASETS = {
     "delaney": build_delaney_regression_dataset,
+    "bace": build_bace_regression_dataset,
+    "lipo": build_lipo_regression_dataset,
+    "freesolv": build_freesolv_regression_dataset,
+    "clearance": build_clearance_regression_dataset,
 }
 
 
@@ -272,15 +390,89 @@ def load_bbbp():
     return train_dataset, test_dataset
 
 
+def load_bace():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bace_classification(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
+def load_bace_pic50():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bace_regression(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
+def load_hiv():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_hiv(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
+def load_sider():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_sider(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
+def load_clintox():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clintox(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
+def load_lipo():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_lipo(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
+def load_freesolv():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_freesolv(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
+def load_clearance():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clearance(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='random',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
 def build_bbbp_classification_dataset():
     train_dataset, test_dataset = load_bbbp()
     return train_dataset, test_dataset, 1
 
 
-# name -> loader returning (train_dataset, test_dataset, n_tasks). Add a
-# dataset here to fine-tune on it too.
+def build_bace_classification_dataset():
+    train_dataset, test_dataset = load_bace()
+    return train_dataset, test_dataset, 1
+
+
+def build_hiv_classification_dataset():
+    train_dataset, test_dataset = load_hiv()
+    return train_dataset, test_dataset, 1
+
+
 CLASSIFICATION_DATASETS = {
     "bbbp": build_bbbp_classification_dataset,
+    "bace": build_bace_classification_dataset,
+    "hiv": build_hiv_classification_dataset,
 }
 
 
@@ -292,10 +484,20 @@ def build_tox21_multitask_classification_dataset():
     return train_dataset, test_dataset, len(tasks)
 
 
-# name -> loader returning (train_dataset, test_dataset, n_tasks). Add a
-# dataset here to fine-tune on it too.
+def build_sider_multitask_classification_dataset():
+    train_dataset, test_dataset = load_sider()
+    return train_dataset, test_dataset, train_dataset.y.shape[1]
+
+
+def build_clintox_multitask_classification_dataset():
+    train_dataset, test_dataset = load_clintox()
+    return train_dataset, test_dataset, train_dataset.y.shape[1]
+
+
 MULTITASK_CLASSIFICATION_DATASETS = {
     "tox21": build_tox21_multitask_classification_dataset,
+    "sider": build_sider_multitask_classification_dataset,
+    "clintox": build_clintox_multitask_classification_dataset,
 }
 
 
