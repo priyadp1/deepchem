@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-MAX_SAMPLES = 300  # subset for quick testing
+MAX_SAMPLES = 200  # subset for quick testing
 
 
 def build_pretraining_delaney_dataset():
