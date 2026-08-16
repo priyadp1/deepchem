@@ -1,3 +1,4 @@
+import argparse
 import gc
 import shutil
 import ssl
@@ -19,6 +20,7 @@ import torch
 MAX_SAMPLES = 300  # subset for quick testing
 
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
+CHECKPOINT_DIR = "./olmo_checkpoints_causal_lm"
 
 
 def load_bbbp():
@@ -201,19 +203,19 @@ def build_pretraining_clearance_dataset():
                                           y=np.array(text_list))
 
 
-# Builders concatenated together into the continued-pretraining corpus.
-PRETRAINING_DATASET_BUILDERS = [
-    build_pretraining_delaney_dataset,
-    build_pretraining_bbbp_dataset,
-    build_pretraining_tox21_dataset,
-    build_pretraining_bace_dataset,
-    build_pretraining_hiv_dataset,
-    build_pretraining_sider_dataset,
-    build_pretraining_clintox_dataset,
-    build_pretraining_lipo_dataset,
-    build_pretraining_freesolv_dataset,
-    build_pretraining_clearance_dataset,
-]
+
+PRETRAINING_DATASET_BUILDERS = {
+    "delaney": build_pretraining_delaney_dataset,
+    "bbbp": build_pretraining_bbbp_dataset,
+    "tox21": build_pretraining_tox21_dataset,
+    "bace": build_pretraining_bace_dataset,
+    "hiv": build_pretraining_hiv_dataset,
+    "sider": build_pretraining_sider_dataset,
+    "clintox": build_pretraining_clintox_dataset,
+    "lipo": build_pretraining_lipo_dataset,
+    "freesolv": build_pretraining_freesolv_dataset,
+    "clearance": build_pretraining_clearance_dataset,
+}
 
 
 def run_generation(hf_model, quantized):
@@ -262,13 +264,23 @@ def run_generation(hf_model, quantized):
         print(out)
 
 
-def continued_pretraining(batch_size=10):
+def continued_pretraining(dataset_name=None, batch_size=10):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    print("\n Task: causal_lm (continued pretraining)")
-    pretraining_datasets = [
-        builder() for builder in PRETRAINING_DATASET_BUILDERS
-    ]
+    if dataset_name:
+        print(f"\n Task: causal_lm (continued pretraining) on {dataset_name} "
+              f"only")
+        builders = [PRETRAINING_DATASET_BUILDERS[dataset_name]]
+        model_dir = f"{CHECKPOINT_DIR}_{dataset_name}"
+        pretrained_dir = f"{PRETRAINED_DIR}_{dataset_name}"
+    else:
+        print("\n Task: causal_lm (continued pretraining) on the full "
+              "concatenated corpus")
+        builders = list(PRETRAINING_DATASET_BUILDERS.values())
+        model_dir = CHECKPOINT_DIR
+        pretrained_dir = PRETRAINED_DIR
+
+    pretraining_datasets = [builder() for builder in builders]
     train_text_dataset = dc.data.DiskDataset.from_numpy(
         X=np.concatenate([d.X for d in pretraining_datasets]),
         y=np.concatenate([d.y for d in pretraining_datasets]))
@@ -277,7 +289,7 @@ def continued_pretraining(batch_size=10):
                           tokenizer_path="allenai/OLMo-1B-hf",
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
-                          model_dir="./olmo_checkpoints_causal_lm",
+                          model_dir=model_dir,
                           learning_rate=1e-5,
                           gradient_checkpointing=True,
                           skip_weight_init=True,
@@ -290,7 +302,7 @@ def continued_pretraining(batch_size=10):
     trainer = LightningTorchModel(
         model=pretrain_model,
         batch_size=batch_size,
-        model_dir="./olmo_checkpoints_causal_lm",
+        model_dir=model_dir,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=-1 if torch.cuda.is_available() else 1,
         strategy="ddp" if num_gpus > 1 else "auto",
@@ -316,9 +328,10 @@ def continued_pretraining(batch_size=10):
         if pretrain_model.finetune_strategy in ("lora", "qlora"):
             pretrain_model.model = pretrain_model.model.merge_and_unload()
 
-        shutil.rmtree(PRETRAINED_DIR, ignore_errors=True)
-        pretrain_model.model.save_pretrained(PRETRAINED_DIR)
-        pretrain_model.tokenizer.save_pretrained(PRETRAINED_DIR)
+        shutil.rmtree(pretrained_dir, ignore_errors=True)
+        pretrain_model.model.save_pretrained(pretrained_dir)
+        pretrain_model.tokenizer.save_pretrained(pretrained_dir)
+        print(f"Backbone saved to {pretrained_dir}")
 
     if torch.distributed.is_initialized():
         torch.distributed.barrier()
@@ -329,4 +342,13 @@ def continued_pretraining(batch_size=10):
 
 
 if __name__ == "__main__":
-    continued_pretraining()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dataset",
+        choices=list(PRETRAINING_DATASET_BUILDERS),
+        default=None,
+        help="Pretrain on a single dataset instead of the full concatenated "
+        "corpus.")
+    args = parser.parse_args()
+
+    continued_pretraining(dataset_name=args.dataset)

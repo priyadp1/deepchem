@@ -98,7 +98,10 @@ REGRESSION_DATASETS = {
 }
 
 
-def finetune_regression(dataset_name="delaney", nb_epoch=10, batch_size=10):
+def finetune_regression(dataset_name="delaney",
+                        nb_epoch=10,
+                        batch_size=10,
+                        pretrained_dir=PRETRAINED_DIR):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset, n_tasks = REGRESSION_DATASETS[dataset_name]()
@@ -117,7 +120,8 @@ def finetune_regression(dataset_name="delaney", nb_epoch=10, batch_size=10):
                           learning_rate=3e-5,
                           skip_weight_init=True)
 
-    finetune_model.load_from_pretrained(PRETRAINED_DIR, from_hf_checkpoint=True)
+    print(f"Loading pretrained backbone from {pretrained_dir}")
+    finetune_model.load_from_pretrained(pretrained_dir, from_hf_checkpoint=True)
 
     metric = dc.metrics.Metric(dc.metrics.rms_score)
 
@@ -170,10 +174,17 @@ if __name__ == "__main__":
                         choices=list(REGRESSION_DATASETS),
                         default=None,
                         help="Run a single dataset instead of all of them.")
+    parser.add_argument(
+        "--pretrained-dir",
+        default=PRETRAINED_DIR,
+        help="Backbone to finetune from, e.g. the per-dataset directory "
+        "produced by `olmo_pretrain_benchmark.py --dataset <name>` "
+        "(./olmo_pretrained_backbone_<name>). Defaults to the shared "
+        f"full-corpus backbone ({PRETRAINED_DIR}).")
     args = parser.parse_args()
 
     if args.dataset:
-        finetune_regression(args.dataset)
+        finetune_regression(args.dataset, pretrained_dir=args.pretrained_dir)
     else:
         for dataset_name in REGRESSION_DATASETS:
-            finetune_regression(dataset_name)
+            finetune_regression(dataset_name, pretrained_dir=args.pretrained_dir)
