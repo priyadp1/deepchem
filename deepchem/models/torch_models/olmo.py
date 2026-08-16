@@ -320,8 +320,8 @@ class Olmo(HuggingFaceModel):
                 # checkpointed layers requires grad unless this is called.
                 model.enable_input_require_grads()
             lora_cfg = LoraConfig(
-                r=32,
-                lora_alpha=64,
+                r=16,
+                lora_alpha=32,
                 target_modules=["q_proj", "k_proj", "v_proj"],
                 lora_dropout=0.05,
                 bias="none",
