@@ -63,7 +63,7 @@ MULTITASK_CLASSIFICATION_DATASETS = {
 
 def finetune_multitask_classification(dataset_name="tox21",
                                       nb_epoch=10,
-                                      batch_size=10,
+                                      batch_size=8,
                                       pretrained_dir=PRETRAINED_DIR):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
