@@ -178,7 +178,13 @@ class Olmo(HuggingFaceModel):
                 f"got '{task_type}'")
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-        olmo_config = OlmoConfig.from_pretrained(tokenizer_path)
+        # A default-sized OlmoConfig, not OlmoConfig.from_pretrained(tokenizer_path):
+        # fetching the real config here would make __init__ build the full-size
+        # architecture (e.g. all 32 layers of a 7B model) up front even when the
+        # caller is about to replace it via load_from_pretrained(...,
+        # from_hf_checkpoint=True), which loads the real sized model straight from
+        # model_dir's own config. This keeps __init__ cheap regardless of model size.
+        olmo_config = OlmoConfig(vocab_size=tokenizer.vocab_size)
 
         model: Union[OlmoForCausalLM, OlmoForSequenceClassification]
         init_ctx: ContextManager
