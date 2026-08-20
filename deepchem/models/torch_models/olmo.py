@@ -102,9 +102,11 @@ DTYPES = {
 class Olmo(HuggingFaceModel):
     """OLMo wrapper for classification, regression, and causal language modelling.
 
-    __init__ builds the architecture with random weights. Call
-    load_from_pretrained(model_dir, from_hf_checkpoint=True) to load a
-    pretrained HuggingFace checkpoint.
+    __init__ builds a default-sized architecture with random weights — it does
+    not fetch tokenizer_path's real config, so constructing an Olmo instance
+    is cheap regardless of the target model's size. Call
+    load_from_pretrained(model_dir, from_hf_checkpoint=True) to replace it
+    with the real, full-sized pretrained HuggingFace checkpoint.
 
     Parameters
     ----------
@@ -174,7 +176,13 @@ class Olmo(HuggingFaceModel):
                 f"got '{task_type}'")
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-        olmo_config = OlmoConfig.from_pretrained(tokenizer_path)
+        # A default-sized OlmoConfig, not OlmoConfig.from_pretrained(tokenizer_path):
+        # fetching the real config here would make __init__ build the full-size
+        # architecture (e.g. all 32 layers of a 7B model) up front even when the
+        # caller is about to replace it via load_from_pretrained(...,
+        # from_hf_checkpoint=True), which loads the real sized model straight from
+        # model_dir's own config. This keeps __init__ cheap regardless of model size.
+        olmo_config = OlmoConfig(vocab_size=tokenizer.vocab_size)
 
         model: Union[OlmoForCausalLM, OlmoForSequenceClassification]
         init_ctx: ContextManager
@@ -277,6 +285,8 @@ class Olmo(HuggingFaceModel):
             self.model.gradient_checkpointing_enable()
         if bnb_config is None:
             self.model = self.model.to(self.device)
+
+        self.device = next(self.model.parameters()).device
 
     def build_bnb_config(self) -> Optional[BitsAndBytesConfig]:
         """Build and return a BitsAndBytesConfig for qlora, or None for other strategies.
