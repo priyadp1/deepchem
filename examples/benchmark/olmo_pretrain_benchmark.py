@@ -293,7 +293,8 @@ def continued_pretraining(dataset_name=None, batch_size=10):
                           learning_rate=1e-5,
                           gradient_checkpointing=True,
                           skip_weight_init=True,
-                          batch_size=batch_size)
+                          batch_size=batch_size,
+                          device=torch.device("cpu"))
 
     pretrain_model.load_from_pretrained("allenai/OLMo-7B-hf",
                                         from_hf_checkpoint=True)

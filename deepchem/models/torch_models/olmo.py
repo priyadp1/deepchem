@@ -278,6 +278,8 @@ class Olmo(HuggingFaceModel):
         if bnb_config is None:
             self.model = self.model.to(self.device)
 
+        self.device = next(self.model.parameters()).device
+
     def build_bnb_config(self) -> Optional[BitsAndBytesConfig]:
         """Build and return a BitsAndBytesConfig for qlora, or None for other strategies.
 
