@@ -112,8 +112,11 @@ DTYPES = {
 class Olmo(HuggingFaceModel):
     """OLMo wrapper for classification, regression, and causal language modelling.
 
-    __init__ builds the architecture with random weights. Call
-    load_from_pretrained(model_dir, from_hf_checkpoint=True) to load a
+   __init__ builds a tiny placeholder architecture with random weights — it
+    does not fetch tokenizer_path's real config (whose defaults already match
+    full model sizes like OLMo-7B), so constructing an Olmo instance is cheap
+    regardless of the target model's size. Call load_from_pretrained(model_dir,
+    from_hf_checkpoint=True) to replace it with the real, full-sized
     pretrained HuggingFace checkpoint.
 
     Parameters
@@ -178,13 +181,12 @@ class Olmo(HuggingFaceModel):
                 f"got '{task_type}'")
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-        # A default-sized OlmoConfig, not OlmoConfig.from_pretrained(tokenizer_path):
-        # fetching the real config here would make __init__ build the full-size
-        # architecture (e.g. all 32 layers of a 7B model) up front even when the
-        # caller is about to replace it via load_from_pretrained(...,
-        # from_hf_checkpoint=True), which loads the real sized model straight from
-        # model_dir's own config. This keeps __init__ cheap regardless of model size.
-        olmo_config = OlmoConfig(vocab_size=tokenizer.vocab_size)
+        # Tiny stand-in config; OlmoConfig's defaults already match full OLMo-7B, so load_from_pretrained(..., from_hf_checkpoint=True) is what builds the real-sized model.
+        olmo_config = OlmoConfig(vocab_size=tokenizer.vocab_size,
+                                 hidden_size=64,
+                                 intermediate_size=128,
+                                 num_hidden_layers=1,
+                                 num_attention_heads=4)
 
         model: Union[OlmoForCausalLM, OlmoForSequenceClassification]
         init_ctx: ContextManager
