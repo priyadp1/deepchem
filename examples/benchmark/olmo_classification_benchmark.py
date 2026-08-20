@@ -67,8 +67,8 @@ CLASSIFICATION_DATASETS = {
 
 
 def finetune_classification(dataset_name="bbbp",
-                            nb_epoch=10,
-                            batch_size=8,
+                            nb_epoch=5,
+                            batch_size=1,
                             pretrained_dir=PRETRAINED_DIR):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
@@ -79,7 +79,7 @@ def finetune_classification(dataset_name="bbbp",
 
     model_dir = f"{CLASSIFICATION_FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="classification",
-                          tokenizer_path="allenai/OLMo-1B-hf",
+                          tokenizer_path="allenai/OLMo-7B-hf",
                           n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",

@@ -286,7 +286,7 @@ def continued_pretraining(dataset_name=None, batch_size=10):
         y=np.concatenate([d.y for d in pretraining_datasets]))
 
     pretrain_model = Olmo(task_type="causal_lm",
-                          tokenizer_path="allenai/OLMo-1B-hf",
+                          tokenizer_path="allenai/OLMo-7B-hf",
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
                           model_dir=model_dir,
@@ -295,7 +295,7 @@ def continued_pretraining(dataset_name=None, batch_size=10):
                           skip_weight_init=True,
                           batch_size=batch_size)
 
-    pretrain_model.load_from_pretrained("allenai/OLMo-1B-hf",
+    pretrain_model.load_from_pretrained("allenai/OLMo-7B-hf",
                                         from_hf_checkpoint=True)
 
     num_gpus = torch.cuda.device_count()
@@ -312,7 +312,7 @@ def continued_pretraining(dataset_name=None, batch_size=10):
     print(f"Starting continued pretraining on causal_lm dataset "
           f"({num_gpus} GPU(s))...")
     trainer.fit(train_text_dataset,
-                nb_epoch=5,
+                nb_epoch=1,
                 max_checkpoints_to_keep=1,
                 num_workers=0)
 
