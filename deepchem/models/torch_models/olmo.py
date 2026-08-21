@@ -112,11 +112,8 @@ DTYPES = {
 class Olmo(HuggingFaceModel):
     """OLMo wrapper for classification, regression, and causal language modelling.
 
-   __init__ builds a tiny placeholder architecture with random weights — it
-    does not fetch tokenizer_path's real config (whose defaults already match
-    full model sizes like OLMo-7B), so constructing an Olmo instance is cheap
-    regardless of the target model's size. Call load_from_pretrained(model_dir,
-    from_hf_checkpoint=True) to replace it with the real, full-sized
+    __init__ builds the architecture with random weights. Call
+    load_from_pretrained(model_dir, from_hf_checkpoint=True) to load a
     pretrained HuggingFace checkpoint.
 
     Parameters
@@ -181,12 +178,7 @@ class Olmo(HuggingFaceModel):
                 f"got '{task_type}'")
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-        # Tiny stand-in config; OlmoConfig's defaults already match full OLMo-7B, so load_from_pretrained(..., from_hf_checkpoint=True) is what builds the real-sized model.
-        olmo_config = OlmoConfig(vocab_size=tokenizer.vocab_size,
-                                 hidden_size=64,
-                                 intermediate_size=128,
-                                 num_hidden_layers=1,
-                                 num_attention_heads=4)
+        olmo_config = OlmoConfig.from_pretrained(tokenizer_path)
 
         model: Union[OlmoForCausalLM, OlmoForSequenceClassification]
         init_ctx: ContextManager
