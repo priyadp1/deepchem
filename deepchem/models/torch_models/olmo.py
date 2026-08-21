@@ -17,16 +17,29 @@ from transformers.modeling_utils import PreTrainedModel
 class OlmoForSequenceClassification(OlmoPreTrainedModel):
     """OLMo with a linear scoring head over the last token's hidden state.
 
+    Since OLMo is decoder-only, the head pools the hidden state at the last
+    non-padding token of each sequence (via config.pad_token_id) instead
+    of a [CLS] token. If labels are passed to forward, a loss is
+    computed per config.problem_type.
+
     Parameters
     ----------
     config : OlmoConfig
-        Must have num_labels and problem_type set.
+        Must have num_labels and problem_type set
+        (regression or multi_label_classification).
 
     Example
     --------
+    >>> import torch
+    >>> from transformers import AutoTokenizer
+    >>> tokenizer = AutoTokenizer.from_pretrained("allenai/OLMo-7B-hf")
     >>> model = OlmoForSequenceClassification.from_pretrained(
     ...     "allenai/OLMo-7B-hf", num_labels=1,
-    ...     problem_type="multi_label_classification")
+    ...     problem_type="regression")
+    >>> inputs = tokenizer(["CC(=O)Oc1ccccc1C(=O)O"], return_tensors="pt")
+    >>> outputs = model(**inputs, labels=torch.tensor([[1.6]]))
+    >>> outputs.logits.shape
+    torch.Size([1, 1])
     """
 
     base_model_prefix = "model"
@@ -102,11 +115,8 @@ DTYPES = {
 class Olmo(HuggingFaceModel):
     """OLMo wrapper for classification, regression, and causal language modelling.
 
-    __init__ builds a tiny placeholder architecture with random weights — it
-    does not fetch tokenizer_path's real config (whose defaults already match
-    full model sizes like OLMo-7B), so constructing an Olmo instance is cheap
-    regardless of the target model's size. Call load_from_pretrained(model_dir,
-    from_hf_checkpoint=True) to replace it with the real, full-sized
+    __init__ builds the architecture with random weights. Call
+    load_from_pretrained(model_dir, from_hf_checkpoint=True) to load a
     pretrained HuggingFace checkpoint.
 
     Parameters
@@ -177,12 +187,7 @@ class Olmo(HuggingFaceModel):
                 f"got '{task_type}'")
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-        # Tiny stand-in config; OlmoConfig's defaults already match full OLMo-7B, so load_from_pretrained(..., from_hf_checkpoint=True) is what builds the real-sized model.
-        olmo_config = OlmoConfig(vocab_size=tokenizer.vocab_size,
-                                 hidden_size=64,
-                                 intermediate_size=128,
-                                 num_hidden_layers=1,
-                                 num_attention_heads=4)
+        olmo_config = OlmoConfig.from_pretrained(tokenizer_path)
 
         model: Union[OlmoForCausalLM, OlmoForSequenceClassification]
         init_ctx: ContextManager
@@ -285,8 +290,6 @@ class Olmo(HuggingFaceModel):
             self.model.gradient_checkpointing_enable()
         if bnb_config is None:
             self.model = self.model.to(self.device)
-
-        self.device = next(self.model.parameters()).device
 
     def build_bnb_config(self) -> Optional[BitsAndBytesConfig]:
         """Build and return a BitsAndBytesConfig for qlora, or None for other strategies.
