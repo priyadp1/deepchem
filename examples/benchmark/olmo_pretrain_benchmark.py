@@ -270,7 +270,7 @@ def run_generation(hf_model, quantized):
         print(out)
 
 
-def continued_pretraining(dataset_name=None, batch_size=10):
+def continued_pretraining(dataset_name=None, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     if dataset_name:

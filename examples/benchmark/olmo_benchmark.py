@@ -199,7 +199,7 @@ def run_generation(hf_model, quantized):
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 
 
-def continued_pretraining(batch_size=10):
+def continued_pretraining(batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     print("\n Task: causal_lm (continued pretraining)")
@@ -302,7 +302,7 @@ REGRESSION_DATASETS = {
 }
 
 
-def finetune_regression(dataset_name="delaney", nb_epoch=10, batch_size=1):
+def finetune_regression(dataset_name="delaney", nb_epoch=10, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset, n_tasks = REGRESSION_DATASETS[dataset_name]()
@@ -498,7 +498,7 @@ MULTITASK_CLASSIFICATION_DATASETS = {
 }
 
 
-def finetune_classification(dataset_name="bbbp", nb_epoch=10, batch_size=1):
+def finetune_classification(dataset_name="bbbp", nb_epoch=10, batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset, n_tasks = CLASSIFICATION_DATASETS[
@@ -571,7 +571,7 @@ MULTITASK_CLASSIFICATION_FINETUNE_DIR = "./olmo_checkpoints_multitask_classifica
 
 def finetune_multitask_classification(dataset_name="tox21",
                                       nb_epoch=10,
-                                      batch_size=1):
+                                      batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
     train_dataset, test_dataset, n_tasks = MULTITASK_CLASSIFICATION_DATASETS[
