@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import gc
 import os
 import ssl
@@ -14,19 +14,24 @@ except ImportError:
 import deepchem as dc
 from deepchem.models.torch_models.olmo import Olmo
 from deepchem.models.lightning import LightningTorchModel
-import numpy as np
-import pandas as pd
 import torch
 
-MAX_SAMPLES = 300  # subset for quick testing
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 FINETUNE_DIR = "./olmo_checkpoints_regression"
+
+
+def load_delaney():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_delaney(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='scaffold',
+        transformers=[])
+    return train_dataset, test_dataset
 
 
 def load_lipo():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_lipo(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -34,7 +39,7 @@ def load_lipo():
 def load_freesolv():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_freesolv(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -42,7 +47,7 @@ def load_freesolv():
 def load_clearance():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clearance(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -50,22 +55,13 @@ def load_clearance():
 def load_bace_pic50():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bace_regression(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
 
 def build_delaney_regression_dataset():
-    df = pd.read_csv("datasets/delaney-processed.csv")
-    # Skip the first MAX_SAMPLES rows: those are the continued-pretraining
-    # corpus (build_pretraining_delaney_dataset), so excluding them here
-    # keeps this dataset disjoint from it.
-    smiles = df["smiles"].values[MAX_SAMPLES:]
-    solubility = df["measured log solubility in mols per litre"].values[
-        MAX_SAMPLES:].astype(np.float32).reshape(-1, 1)
-    dataset = dc.data.DiskDataset.from_numpy(X=smiles, y=solubility)
-    train_dataset, test_dataset = dc.splits.RandomSplitter().train_test_split(
-        dataset, frac_train=0.8, seed=42)
+    train_dataset, test_dataset = load_delaney()
     return train_dataset, test_dataset, 1
 
 

@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import gc
 import os
 import ssl
@@ -23,7 +23,7 @@ CLASSIFICATION_FINETUNE_DIR = "./olmo_checkpoints_classification"
 def load_bbbp():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bbbp(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -31,7 +31,7 @@ def load_bbbp():
 def load_bace():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bace_classification(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -39,7 +39,7 @@ def load_bace():
 def load_hiv():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_hiv(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 

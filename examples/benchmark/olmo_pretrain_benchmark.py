@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import gc
 import shutil
 import ssl
@@ -14,7 +14,6 @@ import deepchem as dc
 from deepchem.models.torch_models.olmo import Olmo
 from deepchem.models.lightning import LightningTorchModel
 import numpy as np
-import pandas as pd
 import torch
 
 MAX_SAMPLES = 300  # subset for quick testing
@@ -23,10 +22,18 @@ PRETRAINED_DIR = "./olmo_pretrained_backbone"
 CHECKPOINT_DIR = "./olmo_checkpoints_causal_lm"
 
 
+def load_delaney():
+    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_delaney(
+        featurizer=dc.feat.RawFeaturizer(smiles=True),
+        splitter='scaffold',
+        transformers=[])
+    return train_dataset, test_dataset
+
+
 def load_bbbp():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bbbp(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -34,7 +41,7 @@ def load_bbbp():
 def load_bace():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bace_classification(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -42,7 +49,7 @@ def load_bace():
 def load_hiv():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_hiv(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -50,7 +57,7 @@ def load_hiv():
 def load_sider():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_sider(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -58,7 +65,7 @@ def load_sider():
 def load_clintox():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clintox(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -66,7 +73,7 @@ def load_clintox():
 def load_lipo():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_lipo(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -74,7 +81,7 @@ def load_lipo():
 def load_freesolv():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_freesolv(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -82,16 +89,15 @@ def load_freesolv():
 def load_clearance():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clearance(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
 
 def build_pretraining_delaney_dataset():
-    df = pd.read_csv("datasets/delaney-processed.csv")
-    smiles = df["smiles"].values[:MAX_SAMPLES]
-    solubility = df[
-        "measured log solubility in mols per litre"].values[:MAX_SAMPLES]
+    train_dataset, _ = load_delaney()
+    smiles = train_dataset.X[:MAX_SAMPLES]
+    solubility = train_dataset.y.flatten()[:MAX_SAMPLES]
     text_list = [
         f"SMILES: {i}. Solubility: {j}." for i, j in zip(smiles, solubility)
     ]
@@ -102,7 +108,7 @@ def build_pretraining_delaney_dataset():
 def build_pretraining_tox21_dataset():
     _, (train_dataset, _, _), _ = dc.molnet.load_tox21(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     smiles = train_dataset.X[:MAX_SAMPLES]
     labels = train_dataset.y[:MAX_SAMPLES, 0]

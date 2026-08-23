@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import gc
 import os
 import ssl
@@ -23,7 +23,7 @@ MULTITASK_CLASSIFICATION_FINETUNE_DIR = "./olmo_checkpoints_multitask_classifica
 def load_sider():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_sider(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -31,7 +31,7 @@ def load_sider():
 def load_clintox():
     _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clintox(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset
 
@@ -39,7 +39,7 @@ def load_clintox():
 def build_tox21_multitask_classification_dataset():
     tasks, (train_dataset, _, test_dataset), _ = dc.molnet.load_tox21(
         featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='random',
+        splitter='scaffold',
         transformers=[])
     return train_dataset, test_dataset, len(tasks)
 
