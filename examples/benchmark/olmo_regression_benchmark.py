@@ -95,7 +95,7 @@ REGRESSION_DATASETS = {
 
 
 def finetune_regression(dataset_name="delaney",
-                        nb_epoch=5,
+                        nb_epoch=10,
                         batch_size=1,
                         pretrained_dir=PRETRAINED_DIR):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
