@@ -74,7 +74,7 @@ def finetune_multitask_classification(dataset_name="tox21",
 
     model_dir = f"{MULTITASK_CLASSIFICATION_FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="mtc",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",

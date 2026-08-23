@@ -211,7 +211,7 @@ def continued_pretraining(batch_size=10):
         y=np.concatenate([d.y for d in pretraining_datasets]))
 
     pretrain_model = Olmo(task_type="causal_lm",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
                           model_dir="./olmo_checkpoints_causal_lm",
@@ -220,7 +220,7 @@ def continued_pretraining(batch_size=10):
                           skip_weight_init=True,
                           batch_size=batch_size)
 
-    pretrain_model.load_from_pretrained("allenai/OLMo-7B-hf",
+    pretrain_model.load_from_pretrained("allenai/OLMo-1B-hf",
                                         from_hf_checkpoint=True)
 
     num_gpus = torch.cuda.device_count()
@@ -311,7 +311,7 @@ def finetune_regression(dataset_name="delaney", nb_epoch=5, batch_size=1):
 
     model_dir = f"{FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="regression",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
@@ -508,7 +508,7 @@ def finetune_classification(dataset_name="bbbp", nb_epoch=5, batch_size=1):
 
     model_dir = f"{CLASSIFICATION_FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="classification",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
@@ -581,7 +581,7 @@ def finetune_multitask_classification(dataset_name="tox21",
 
     model_dir = f"{MULTITASK_CLASSIFICATION_FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="mtc",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",

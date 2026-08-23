@@ -79,7 +79,7 @@ def finetune_classification(dataset_name="bbbp",
 
     model_dir = f"{CLASSIFICATION_FINETUNE_DIR}_{dataset_name}"
     finetune_model = Olmo(task_type="classification",
-                          tokenizer_path="allenai/OLMo-7B-hf",
+                          tokenizer_path="allenai/OLMo-1B-hf",
                           n_tasks=n_tasks,
                           torch_dtype=dtype,
                           finetune_strategy="qlora",
