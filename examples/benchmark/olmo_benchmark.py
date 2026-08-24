@@ -4,6 +4,9 @@ import shutil
 import ssl
 import time
 
+os.environ.setdefault("NCCL_P2P_DISABLE", "1")
+os.environ.setdefault("NCCL_SHM_DISABLE", "1")
+
 try:
     import certifi
     ssl._create_default_https_context = lambda: ssl.create_default_context(

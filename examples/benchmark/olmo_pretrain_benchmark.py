@@ -1,7 +1,11 @@
 ﻿import argparse
 import gc
+import os
 import shutil
 import ssl
+
+os.environ.setdefault("NCCL_P2P_DISABLE", "1")
+os.environ.setdefault("NCCL_SHM_DISABLE", "1")
 
 try:
     import certifi
