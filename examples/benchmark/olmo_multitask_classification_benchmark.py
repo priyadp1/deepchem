@@ -19,6 +19,9 @@ from deepchem.models.torch_models.olmo import Olmo
 from deepchem.models.lightning import LightningTorchModel
 import torch
 
+if torch.cuda.is_available():
+    torch.cuda.set_device(int(os.environ.get("LOCAL_RANK", "0")))
+
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 MULTITASK_CLASSIFICATION_FINETUNE_DIR = "./olmo_checkpoints_multitask_classification"
 

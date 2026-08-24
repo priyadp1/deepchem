@@ -20,6 +20,9 @@ from deepchem.models.lightning import LightningTorchModel
 import numpy as np
 import torch
 
+if torch.cuda.is_available():
+    torch.cuda.set_device(int(os.environ.get("LOCAL_RANK", "0")))
+
 MAX_SAMPLES = 200  # subset for quick testing
 
 
