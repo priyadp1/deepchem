@@ -104,12 +104,7 @@ def load_clearance():
 def build_pretraining_delaney_dataset():
     train_dataset, _ = load_delaney()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    solubility = train_dataset.y.flatten()[:MAX_SAMPLES]
-    text_list = [
-        f"SMILES: {i}. Solubility: {j}." for i, j in zip(smiles, solubility)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_tox21_dataset():
@@ -118,102 +113,55 @@ def build_pretraining_tox21_dataset():
         splitter='scaffold',
         transformers=[])
     smiles = train_dataset.X[:MAX_SAMPLES]
-    labels = train_dataset.y[:MAX_SAMPLES, 0]
-    text_list = [
-        f"SMILES: {i}. Toxicity: {int(j)}." for i, j in zip(smiles, labels)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_bbbp_dataset():
     train_dataset, _ = load_bbbp()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
-    text_list = [
-        f"SMILES: {i}. BBB Permeant: {int(j)}." for i, j in zip(smiles, labels)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_bace_dataset():
     train_dataset, _ = load_bace()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
-    text_list = [
-        f"SMILES: {i}. BACE Inhibitor: {int(j)}."
-        for i, j in zip(smiles, labels)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_hiv_dataset():
     train_dataset, _ = load_hiv()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    labels = train_dataset.y.flatten()[:MAX_SAMPLES]
-    text_list = [
-        f"SMILES: {i}. HIV Active: {int(j)}." for i, j in zip(smiles, labels)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_sider_dataset():
     train_dataset, _ = load_sider()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    labels = train_dataset.y[:MAX_SAMPLES, 0]
-    text_list = [
-        f"SMILES: {i}. Side Effect: {int(j)}." for i, j in zip(smiles, labels)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_clintox_dataset():
     train_dataset, _ = load_clintox()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    labels = train_dataset.y[:MAX_SAMPLES, 0]
-    text_list = [
-        f"SMILES: {i}. FDA Approved: {int(j)}." for i, j in zip(smiles, labels)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_lipo_dataset():
     train_dataset, _ = load_lipo()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    values = train_dataset.y.flatten()[:MAX_SAMPLES]
-    text_list = [
-        f"SMILES: {i}. Lipophilicity: {j}." for i, j in zip(smiles, values)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_freesolv_dataset():
     train_dataset, _ = load_freesolv()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    values = train_dataset.y.flatten()[:MAX_SAMPLES]
-    text_list = [
-        f"SMILES: {i}. Hydration Free Energy: {j}."
-        for i, j in zip(smiles, values)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 def build_pretraining_clearance_dataset():
     train_dataset, _ = load_clearance()
     smiles = train_dataset.X[:MAX_SAMPLES]
-    values = train_dataset.y.flatten()[:MAX_SAMPLES]
-    text_list = [
-        f"SMILES: {i}. Clearance: {j}." for i, j in zip(smiles, values)
-    ]
-    return dc.data.DiskDataset.from_numpy(X=np.array(text_list),
-                                          y=np.array(text_list))
+    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
 
 
 
