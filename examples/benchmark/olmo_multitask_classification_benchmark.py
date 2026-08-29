@@ -88,7 +88,7 @@ def finetune_multitask_classification(dataset_name="tox21",
                           gradient_checkpointing=True,
                           model_dir=model_dir,
                           batch_size=batch_size,
-                          learning_rate=3e-5,
+                          learning_rate=2e-4,
                           skip_weight_init=True)
 
     print(f"Loading pretrained backbone from {pretrained_dir}")
