@@ -17,6 +17,7 @@ except ImportError:
 import deepchem as dc
 from deepchem.models.torch_models.olmo import Olmo
 from deepchem.models.lightning import LightningTorchModel
+from lightning.pytorch.callbacks import EarlyStopping
 import torch
 
 if torch.cuda.is_available():
@@ -73,7 +74,7 @@ CLASSIFICATION_DATASETS = {
 
 
 def finetune_classification(dataset_name="bbbp",
-                            nb_epoch=10,
+                            nb_epoch=30,
                             batch_size=8,
                             pretrained_dir=PRETRAINED_DIR):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
@@ -110,6 +111,9 @@ def finetune_classification(dataset_name="bbbp",
         torch.cuda.reset_peak_memory_stats()
 
     num_gpus = torch.cuda.device_count()
+    early_stopping = EarlyStopping(monitor="train_loss",
+                                   mode="min",
+                                   patience=7)
     trainer = LightningTorchModel(
         model=finetune_model,
         batch_size=batch_size,
@@ -118,7 +122,8 @@ def finetune_classification(dataset_name="bbbp",
         devices=-1 if torch.cuda.is_available() else 1,
         strategy="ddp" if num_gpus > 1 else "auto",
         enable_progress_bar=True,
-        log_every_n_steps=1)
+        log_every_n_steps=1,
+        callbacks=[early_stopping])
 
     t0 = time.time()
     trainer.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
