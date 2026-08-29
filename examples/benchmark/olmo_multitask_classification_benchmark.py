@@ -147,10 +147,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pretrained-dir",
         default=PRETRAINED_DIR,
-        help="Backbone to finetune from, e.g. the per-dataset directory "
-        "produced by `olmo_pretrain_benchmark.py --dataset <name>` "
-        "(./olmo_pretrained_backbone_<name>). Defaults to the shared "
-        f"full-corpus backbone ({PRETRAINED_DIR}).")
+        help="Backbone to finetune from, produced by "
+        "`olmo_pretrain_benchmark.py` (continued pretraining on streamed "
+        f"UniChem molecules). Defaults to {PRETRAINED_DIR}.")
     args = parser.parse_args()
 
     if args.dataset:

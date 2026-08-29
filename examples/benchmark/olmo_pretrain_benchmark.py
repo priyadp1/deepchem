@@ -17,166 +17,73 @@ except ImportError:
 import deepchem as dc
 from deepchem.models.torch_models.olmo import Olmo
 from deepchem.models.lightning import LightningTorchModel
+from datasets import load_dataset
+from rdkit import Chem
 import numpy as np
 import torch
 
 if torch.cuda.is_available():
     torch.cuda.set_device(int(os.environ.get("LOCAL_RANK", "0")))
 
-MAX_SAMPLES = 300  # subset for quick testing
-
+MAX_SAMPLES = 1000000  # subset for continued pretraining
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 CHECKPOINT_DIR = "./olmo_checkpoints_causal_lm"
 
 
-def load_delaney():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_delaney(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+def canonicalize_smiles(smiles):
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return None
+        return Chem.MolToSmiles(mol, canonical=True)
+    except Exception:
+        return None
 
 
-def load_bbbp():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bbbp(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+def build_pretraining_safe_gpt_dataset():
+    dataset = load_dataset("datamol-io/safe-gpt",
+                           split="train",
+                           streaming=True)
 
+    smiles = []
+    seen = set()
 
-def load_bace():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_bace_classification(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+    print(f"Streaming UniChem...")
+    print(f"Target: {MAX_SAMPLES:,} unique molecules")
 
+    for row in dataset:
+        if str(row.get("source", "")).lower() != "unichem":
+            continue
 
-def load_hiv():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_hiv(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+        molecule = row.get("smiles")
+        if not molecule:
+            continue
 
+        molecule = canonicalize_smiles(molecule)
+        if molecule is None:
+            continue
 
-def load_sider():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_sider(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+        if molecule in seen:
+            continue
 
+        seen.add(molecule)
+        smiles.append(molecule)
 
-def load_clintox():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clintox(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+        if len(smiles) % 10_000 == 0:
+            print(f"Collected {len(smiles):,}/{MAX_SAMPLES:,} molecules")
 
+        if len(smiles) >= MAX_SAMPLES:
+            break
 
-def load_lipo():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_lipo(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+    if len(smiles) == 0:
+        raise RuntimeError(
+            "No UniChem molecules were found in datamol-io/safe-gpt.")
 
+    smiles = np.asarray(smiles, dtype=object)
 
-def load_freesolv():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_freesolv(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
+    print(f"Final pretraining corpus: {len(smiles):,} molecules")
 
-
-def load_clearance():
-    _, (train_dataset, _, test_dataset), _ = dc.molnet.load_clearance(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    return train_dataset, test_dataset
-
-
-def build_pretraining_delaney_dataset():
-    train_dataset, _ = load_delaney()
-    smiles = train_dataset.X[:MAX_SAMPLES]
     return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_tox21_dataset():
-    _, (train_dataset, _, _), _ = dc.molnet.load_tox21(
-        featurizer=dc.feat.RawFeaturizer(smiles=True),
-        splitter='scaffold',
-        transformers=[])
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_bbbp_dataset():
-    train_dataset, _ = load_bbbp()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_bace_dataset():
-    train_dataset, _ = load_bace()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_hiv_dataset():
-    train_dataset, _ = load_hiv()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_sider_dataset():
-    train_dataset, _ = load_sider()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_clintox_dataset():
-    train_dataset, _ = load_clintox()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_lipo_dataset():
-    train_dataset, _ = load_lipo()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_freesolv_dataset():
-    train_dataset, _ = load_freesolv()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-def build_pretraining_clearance_dataset():
-    train_dataset, _ = load_clearance()
-    smiles = train_dataset.X[:MAX_SAMPLES]
-    return dc.data.DiskDataset.from_numpy(X=smiles, y=smiles)
-
-
-
-PRETRAINING_DATASET_BUILDERS = {
-    "delaney": build_pretraining_delaney_dataset,
-    "bbbp": build_pretraining_bbbp_dataset,
-    "tox21": build_pretraining_tox21_dataset,
-    "bace": build_pretraining_bace_dataset,
-    "hiv": build_pretraining_hiv_dataset,
-    "sider": build_pretraining_sider_dataset,
-    "clintox": build_pretraining_clintox_dataset,
-    "lipo": build_pretraining_lipo_dataset,
-    "freesolv": build_pretraining_freesolv_dataset,
-    "clearance": build_pretraining_clearance_dataset,
-}
 
 
 def run_generation(hf_model, quantized):
@@ -225,26 +132,16 @@ def run_generation(hf_model, quantized):
         print(out)
 
 
-def continued_pretraining(dataset_name=None, batch_size=8):
+def continued_pretraining(batch_size=8):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    if dataset_name:
-        print(f"\n Task: causal_lm (continued pretraining) on {dataset_name} "
-              f"only")
-        builders = [PRETRAINING_DATASET_BUILDERS[dataset_name]]
-        model_dir = f"{CHECKPOINT_DIR}_{dataset_name}"
-        pretrained_dir = f"{PRETRAINED_DIR}_{dataset_name}"
-    else:
-        print("\n Task: causal_lm (continued pretraining) on the full "
-              "concatenated corpus")
-        builders = list(PRETRAINING_DATASET_BUILDERS.values())
-        model_dir = CHECKPOINT_DIR
-        pretrained_dir = PRETRAINED_DIR
+    print("\n Task: causal_lm (continued pretraining) on "
+          "datamol-io/safe-gpt UniChem molecules")
 
-    pretraining_datasets = [builder() for builder in builders]
-    train_text_dataset = dc.data.DiskDataset.from_numpy(
-        X=np.concatenate([d.X for d in pretraining_datasets]),
-        y=np.concatenate([d.y for d in pretraining_datasets]))
+    model_dir = CHECKPOINT_DIR
+    pretrained_dir = PRETRAINED_DIR
+
+    train_text_dataset = build_pretraining_safe_gpt_dataset()
 
     pretrain_model = Olmo(task_type="causal_lm",
                           tokenizer_path="allenai/OLMo-1B-hf",
@@ -274,7 +171,7 @@ def continued_pretraining(dataset_name=None, batch_size=8):
     print(f"Starting continued pretraining on causal_lm dataset "
           f"({num_gpus} GPU(s))...")
     trainer.fit(train_text_dataset,
-                nb_epoch=5,
+                nb_epoch=1,
                 max_checkpoints_to_keep=1,
                 num_workers=0)
 
@@ -306,11 +203,13 @@ def continued_pretraining(dataset_name=None, batch_size=8):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset",
-        choices=list(PRETRAINING_DATASET_BUILDERS),
-        default=None,
-        help="Pretrain on a single dataset instead of the full concatenated "
-        "corpus.")
+        "--max-samples",
+        type=int,
+        default=1000000,
+        help="Number of unique UniChem molecules to use for continued "
+        "pretraining.")
     args = parser.parse_args()
 
-    continued_pretraining(dataset_name=args.dataset)
+    MAX_SAMPLES = args.max_samples
+
+    continued_pretraining()
