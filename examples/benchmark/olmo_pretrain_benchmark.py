@@ -25,7 +25,7 @@ import torch
 if torch.cuda.is_available():
     torch.cuda.set_device(int(os.environ.get("LOCAL_RANK", "0")))
 
-MAX_SAMPLES = 1000000  # subset for continued pretraining
+MAX_SAMPLES = 1000  # subset for continued pretraining
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 CHECKPOINT_DIR = "./olmo_checkpoints_causal_lm"
 
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-samples",
         type=int,
-        default=1000000,
+        default=1000,
         help="Number of unique UniChem molecules to use for continued "
         "pretraining.")
     args = parser.parse_args()
