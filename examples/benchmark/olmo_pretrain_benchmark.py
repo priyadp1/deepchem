@@ -26,6 +26,7 @@ if torch.cuda.is_available():
     torch.cuda.set_device(int(os.environ.get("LOCAL_RANK", "0")))
 
 MAX_SAMPLES = 1000  # subset for continued pretraining
+MAX_SMILES_LENGTH = 200  # cap on longer SMILES strings to avoid OOM
 PRETRAINED_DIR = "./olmo_pretrained_backbone"
 CHECKPOINT_DIR = "./olmo_checkpoints_causal_lm"
 
@@ -61,6 +62,9 @@ def build_pretraining_safe_gpt_dataset():
 
         molecule = canonicalize_smiles(molecule)
         if molecule is None:
+            continue
+
+        if len(molecule) > MAX_SMILES_LENGTH:
             continue
 
         if molecule in seen:
@@ -208,8 +212,16 @@ if __name__ == "__main__":
         default=1000,
         help="Number of unique UniChem molecules to use for continued "
         "pretraining.")
+    parser.add_argument(
+        "--max-smiles-length",
+        type=int,
+        default=200,
+        help="Maximum canonical SMILES string length to include, to bound "
+        "tokenized sequence length and avoid GPU OOMs from outlier "
+        "molecules.")
     args = parser.parse_args()
 
     MAX_SAMPLES = args.max_samples
+    MAX_SMILES_LENGTH = args.max_smiles_length
 
     continued_pretraining()
