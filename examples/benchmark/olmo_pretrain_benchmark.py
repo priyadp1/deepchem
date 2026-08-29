@@ -209,7 +209,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-samples",
         type=int,
-        default=1000,
+        default=10000,
         help="Number of unique UniChem molecules to use for continued "
         "pretraining.")
     parser.add_argument(
