@@ -74,7 +74,7 @@ CLASSIFICATION_DATASETS = {
 
 
 def finetune_classification(dataset_name="bbbp",
-                            nb_epoch=30,
+                            nb_epoch=5,
                             batch_size=8,
                             pretrained_dir=PRETRAINED_DIR):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
