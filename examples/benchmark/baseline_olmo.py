@@ -247,7 +247,7 @@ if __name__ == "__main__":
                         list(MULTITASK_CLASSIFICATION_DATASETS.keys()) +
                         list(CLASSIFICATION_DATASETS.keys()),
                         help="Dataset name")
-    parser.add_argument("--nb_epoch", type=int, default=5,
+    parser.add_argument("--nb_epoch", type=int, default=30,
                         help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=8,
                         help="Batch size")
