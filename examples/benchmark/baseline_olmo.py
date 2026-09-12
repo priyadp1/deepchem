@@ -231,7 +231,7 @@ def baseline_olmo_experiment(dataset_name="delaney",
         batch_size=batch_size,
         callbacks=[early_stopping_callback])
 
-    lightning_model.fit(train_dataset, nb_epoch=nb_epoch)
+    lightning_model.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
 
     metric = dc.metrics.Metric(dc.metrics.pearson_r2_score
                                if task_type == "regression" else dc.metrics.roc_auc_score)
