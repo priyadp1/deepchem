@@ -226,17 +226,22 @@ def baseline_olmo_experiment(dataset_name="delaney",
     early_stopping_callback = EarlyStopping(
         monitor="train_loss", patience=3, mode="min")
 
+    num_gpus = torch.cuda.device_count()
     lightning_model = LightningTorchModel(
         model=model,
         batch_size=batch_size,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=-1 if torch.cuda.is_available() else 1,
+        strategy="ddp" if num_gpus > 1 else "auto",
         callbacks=[early_stopping_callback])
 
     lightning_model.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
+    model.model.to(model.device)
 
     metric = dc.metrics.Metric(dc.metrics.pearson_r2_score
                                if task_type == "regression" else dc.metrics.roc_auc_score)
 
-    scores = lightning_model.evaluate(test_dataset, [metric], per_task_metrics=True)
+    scores = model.evaluate(test_dataset, [metric], per_task_metrics=True)
     print(f"[{dataset_name}] Test scores: {scores}")
 
 
