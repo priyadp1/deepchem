@@ -238,11 +238,12 @@ def baseline_olmo_experiment(dataset_name="delaney",
     lightning_model.fit(train_dataset, nb_epoch=nb_epoch, num_workers=0)
     model.model.to(model.device)
 
-    metric = dc.metrics.Metric(dc.metrics.pearson_r2_score
+    metric_name = "rms_score" if task_type == "regression" else "roc_auc_score"
+    metric = dc.metrics.Metric(dc.metrics.rms_score
                                if task_type == "regression" else dc.metrics.roc_auc_score)
 
-    scores = model.evaluate(test_dataset, [metric], per_task_metrics=True)
-    print(f"[{dataset_name}] Test scores: {scores}")
+    test_score = model.evaluate(test_dataset, metrics=[metric])[metric_name]
+    print(f"[{dataset_name}] Test {metric_name}: {test_score:.3f}")
 
 
 if __name__ == "__main__":
