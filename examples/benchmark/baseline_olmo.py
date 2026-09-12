@@ -159,7 +159,7 @@ def build_hiv_classification_dataset():
 
 REGRESSION_DATASETS = {
     "delaney": build_delaney_regression_dataset,
-    "bace": build_bace_regression_dataset,
+    "bace_regression": build_bace_regression_dataset,
     "lipo": build_lipo_regression_dataset,
     "freesolv": build_freesolv_regression_dataset,
     "clearance": build_clearance_regression_dataset,
@@ -174,7 +174,7 @@ MULTITASK_CLASSIFICATION_DATASETS = {
 
 CLASSIFICATION_DATASETS = {
     "bbbp": build_bbbp_classification_dataset,
-    "bace": build_bace_classification_dataset,
+    "bace_classification": build_bace_classification_dataset,
     "hiv": build_hiv_classification_dataset,
 }
 
