@@ -235,9 +235,9 @@ def olmo_and_chemfm_tokenization_and_cpt(dataset_name="delaney",
         finetune_strategy="qlora",
         gradient_checkpointing=True,
         skip_weight_init=True)
-    model.load_from_pretrained(pretrained_dir, from_hf_checkpoint=True)
 
     modify_olmo_tokenizer_to_chemfm(model, chemfm_tokenizer_dir)
+    model.load_from_pretrained(pretrained_dir, from_hf_checkpoint=True)
 
     early_stopping_callback = EarlyStopping(
         monitor="train_loss", patience=3, mode="min")

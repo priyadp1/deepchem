@@ -277,6 +277,8 @@ class Olmo(HuggingFaceModel):
                 torch_dtype=self._torch_dtype,
                 low_cpu_mem_usage=True)
 
+        self._resize_embeddings_to_tokenizer()
+
         if self.finetune_strategy in ('lora', 'qlora'):
             peft_task_type = "CAUSAL_LM" if self.task == 'causal_lm' else "SEQ_CLS"
             self.model = self.apply_peft(self.model, peft_task_type)
@@ -287,6 +289,17 @@ class Olmo(HuggingFaceModel):
             self.model = self.model.to(self.device)
 
         self.device = next(self.model.parameters()).device
+
+    def _resize_embeddings_to_tokenizer(self) -> None:
+        """Resize the just-loaded checkpoint's embeddings to self.tokenizer."""
+        target_vocab_size = len(self.tokenizer)
+        current_vocab_size = self.model.get_input_embeddings(
+        ).weight.shape[0]
+        if target_vocab_size != current_vocab_size:
+            self.model.resize_token_embeddings(target_vocab_size)
+            self.model.config.vocab_size = target_vocab_size
+        if self.tokenizer.pad_token_id is not None:
+            self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
     def build_bnb_config(self) -> Optional[BitsAndBytesConfig]:
         """Build and return a BitsAndBytesConfig for qlora, or None for other strategies.
