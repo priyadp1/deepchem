@@ -200,7 +200,7 @@ def modify_olmo_tokenizer_to_chemfm(model, chemfm_tokenizer_dir):
 def olmo_and_chemfm_tokenization(dataset_name="delaney",
                           nb_epoch=30,
                           batch_size=8,
-                          pretrained_dir="allenai/OLMo-1B-hf",
+                          pretrained_dir="allenai/OLMo-7B-hf",
                           chemfm_tokenizer_dir=DEFAULT_CHEMFM_TOKENIZER_DIR):
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=8,
                         help="Batch size")
     parser.add_argument("--pretrained_dir", type=str,
-                        default="allenai/OLMo-1B-hf",
+                        default="allenai/OLMo-7B-hf",
                         help="HuggingFace model ID or local directory to "
                         "load the pretrained OLMo checkpoint and tokenizer "
                         "from")
